@@ -1,0 +1,285 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Claude Code Restart Monitor API",
+    "version": "1.0.0",
+    "description": "CLI interface for automated Claude Code monitoring and restart system"
+  },
+  "paths": {
+    "/monitor/start": {
+      "post": {
+        "summary": "Start monitoring Claude Code process",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "claude_command": {
+                    "type": "string",
+                    "description": "Command to start Claude Code"
+                  },
+                  "working_directory": {
+                    "type": "string",
+                    "description": "Working directory for Claude Code"
+                  },
+                  "restart_commands": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Commands to execute on restart"
+                  }
+                },
+                "required": ["claude_command"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Monitoring started successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "session_id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["active"]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters"
+          },
+          "500": {
+            "description": "Failed to start monitoring"
+          }
+        }
+      }
+    },
+    "/monitor/stop": {
+      "post": {
+        "summary": "Stop monitoring and cleanup",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "session_id": {
+                    "type": "string",
+                    "description": "Optional session ID to stop specific session"
+                  },
+                  "force": {
+                    "type": "boolean",
+                    "description": "Force stop even during waiting period"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Monitoring stopped successfully"
+          },
+          "404": {
+            "description": "Session not found"
+          }
+        }
+      }
+    },
+    "/monitor/status": {
+      "get": {
+        "summary": "Get current monitoring status",
+        "responses": {
+          "200": {
+            "description": "Current status information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MonitoringSession"
+                      }
+                    },
+                    "waiting_periods": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WaitingPeriod"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config/get": {
+      "get": {
+        "summary": "Get current configuration",
+        "responses": {
+          "200": {
+            "description": "Configuration retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemConfiguration"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config/update": {
+      "put": {
+        "summary": "Update system configuration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SystemConfiguration"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuration updated successfully"
+          },
+          "400": {
+            "description": "Invalid configuration"
+          }
+        }
+      }
+    },
+    "/logs/stream": {
+      "get": {
+        "summary": "Stream real-time logs",
+        "parameters": [
+          {
+            "name": "level",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["DEBUG", "INFO", "WARN", "ERROR"]
+            }
+          },
+          {
+            "name": "follow",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Log stream",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MonitoringSession": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "waiting", "stopped"]
+          },
+          "claude_process_id": {
+            "type": "integer"
+          },
+          "detection_count": {
+            "type": "integer"
+          }
+        }
+      },
+      "WaitingPeriod": {
+        "type": "object",
+        "properties": {
+          "period_id": {
+            "type": "string"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "remaining_seconds": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "completed", "cancelled"]
+          }
+        }
+      },
+      "SystemConfiguration": {
+        "type": "object",
+        "properties": {
+          "log_level": {
+            "type": "string",
+            "enum": ["DEBUG", "INFO", "WARN", "ERROR"]
+          },
+          "detection_patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "max_log_size_mb": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "backup_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          }
+        }
+      }
+    }
+  }
+}
