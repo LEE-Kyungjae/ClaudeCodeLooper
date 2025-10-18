@@ -12,6 +12,7 @@ from typing import Optional
 from ..models.system_configuration import SystemConfiguration
 from ..services.config_manager import ConfigManager
 from ..services.restart_controller import RestartController
+from ..services.template_manager import TemplateManager
 
 
 # Global context object
@@ -25,6 +26,7 @@ class CLIContext:
         self.verbose = False
         self.quiet = False
         self.test_mode = False
+        self.template_manager: Optional[TemplateManager] = None
 
 
 # Create context
@@ -77,6 +79,7 @@ def cli(ctx: CLIContext, config: Optional[str], verbose: bool, quiet: bool, vers
 
         # Initialize controller
         ctx.controller = RestartController(ctx.config)
+        ctx.template_manager = TemplateManager()
 
         # Determine test mode
         env_test_mode = os.getenv("CLAUDE_RESTART_TEST_MODE")

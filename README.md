@@ -344,12 +344,20 @@ Commands:
   list              Show queued tasks in execution order
   remove <nums...>  Remove tasks by their list numbers
   clear             Clear the queue (use --confirm to skip prompt)
+  templates         List predefined templates and guidelines
 ```
 
 **Examples:**
 ```bash
-# Add a follow-up task
-claude-looper queue add "코드 점검"
+# Check available templates
+claude-looper queue templates
+
+# Add a task with template + extra checklist + follow-up command
+claude-looper queue add \
+  --template backend_feature \
+  --guideline "DB 마이그레이션 영향 검토" \
+  --post "pytest tests/api" \
+  "에러 로깅 개선"
 
 # Inspect the queue
 claude-looper queue list
