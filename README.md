@@ -29,32 +29,42 @@ Claude Code usage limit를 걱정 없이 장시간 작업할 수 있도록 도�
 
 ## 🚀 빠른 설치
 
-### 방법 1: pip로 설치 (권장)
+### 방법 1: GitHub에서 직접 설치 (가장 빠름 ⚡)
 
 ```bash
-# 1. 저장소 클론
-git clone https://github.com/LEE-Kyungjae/ClaudeCodeLooper.git
-cd ClaudeCodeLooper
+# 한 줄로 설치 완료!
+pip install git+https://github.com/LEE-Kyungjae/ClaudeCodeLooper.git
 
-# 2. 패키지 설치
-pip install -e .
-
-# 3. 설치 확인
+# 설치 확인
 claude-looper --version
 ```
 
-### 방법 2: 수동 설치
+### 방법 2: 자동 설치 스크립트
 
 ```bash
-# 1. 저장소 클론
+# 저장소 클론
 git clone https://github.com/LEE-Kyungjae/ClaudeCodeLooper.git
 cd ClaudeCodeLooper
 
-# 2. 의존성 설치
-pip install -r requirements.txt
+# 자동 설치 (macOS/Linux)
+./install.sh
 
-# 3. Python 모듈로 실행
-python -m src.cli.main --help
+# 자동 설치 (Windows)
+install.bat
+```
+
+### 방법 3: 수동 설치 (개발자용)
+
+```bash
+# 저장소 클론
+git clone https://github.com/LEE-Kyungjae/ClaudeCodeLooper.git
+cd ClaudeCodeLooper
+
+# 개발 모드로 설치
+pip install -e ".[dev]"
+
+# 또는 일반 설치
+pip install -e .
 ```
 
 ---

@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine wheel setuptools
+
+    - name: Build package
+      run: |
+        python -m build
+
+    - name: Extract version from tag
+      id: get_version
+      run: |
+        echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Release ${{ steps.get_version.outputs.VERSION }}
+        body: |
+          ## Installation
+
+          ```bash
+          pip install git+https://github.com/${{ github.repository }}.git@${{ github.ref_name }}
+          ```
+
+          Or download the wheel file below and install:
+
+          ```bash
+          pip install claude_code_looper-${{ steps.get_version.outputs.VERSION }}-py3-none-any.whl
+          ```
+
+          ## What's Changed
+
+          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for detailed changes.
+
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.get_version.outputs.VERSION }}
+        files: |
+          dist/*
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
