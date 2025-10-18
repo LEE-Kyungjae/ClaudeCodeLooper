@@ -173,10 +173,26 @@ class RestartController:
                 self._trigger_event("error_occurred", {"error": str(e), "context": "start_monitoring"})
                 raise RuntimeError(f"Failed to start monitoring: {e}")
 
-    def add_task_to_queue(self, description: str) -> QueuedTask:
+    def add_task_to_queue(
+        self,
+        description: str,
+        *,
+        template_id: Optional[str] = None,
+        persona_prompt: Optional[str] = None,
+        guideline_prompt: Optional[str] = None,
+        notes: Optional[str] = None,
+        post_commands: Optional[List[str]] = None,
+    ) -> QueuedTask:
         """Schedule a task to run after the next restart."""
         with self._lock:
-            task = self.task_queue.add_task(description)
+            task = self.task_queue.add_task(
+                description,
+                template_id=template_id,
+                persona_prompt=persona_prompt,
+                guideline_prompt=guideline_prompt,
+                notes=notes,
+                post_commands=post_commands,
+            )
             self._save_current_state()
             return task
 
@@ -470,11 +486,30 @@ class RestartController:
         failed_index: Optional[int] = None
 
         for index, task in enumerate(queued_tasks):
-            success = self.process_monitor.send_input(session.session_id, task.description)
-            if success:
-                # Small delay to avoid overwhelming the CLI process
+            send_sequence: List[str] = []
+
+            if task.persona_prompt:
+                send_sequence.append(task.persona_prompt)
+
+            if task.guideline_prompt:
+                send_sequence.append(task.guideline_prompt)
+
+            if task.notes:
+                send_sequence.append(f"### 추가 메모\n{task.notes}")
+
+            send_sequence.append(task.description)
+
+            if task.post_commands:
+                send_sequence.extend(task.post_commands)
+
+            success = True
+            for message in send_sequence:
+                if not self.process_monitor.send_input(session.session_id, message):
+                    success = False
+                    break
                 time.sleep(0.2)
-            else:
+
+            if not success:
                 failed_index = index
                 break
 

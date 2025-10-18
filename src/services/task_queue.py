@@ -16,13 +16,29 @@ class TaskQueueManager:
     def __len__(self) -> int:
         return len(self._tasks)
 
-    def add_task(self, description: str) -> QueuedTask:
+    def add_task(
+        self,
+        description: str,
+        *,
+        template_id: Optional[str] = None,
+        persona_prompt: Optional[str] = None,
+        guideline_prompt: Optional[str] = None,
+        notes: Optional[str] = None,
+        post_commands: Optional[List[str]] = None,
+    ) -> QueuedTask:
         """Add a task to the end of the queue."""
         description = description.strip()
         if not description:
             raise ValueError("Task description cannot be empty")
 
-        task = QueuedTask(description=description)
+        task = QueuedTask(
+            description=description,
+            template_id=template_id,
+            persona_prompt=persona_prompt,
+            guideline_prompt=guideline_prompt,
+            notes=notes,
+            post_commands=list(post_commands or []),
+        )
         self._tasks.append(task)
         return task
 
