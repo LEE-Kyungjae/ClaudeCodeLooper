@@ -48,17 +48,24 @@ ClaudeCodeLooper automatically detects Claude Code's 5-hour usage limits, manage
 
 ## 🚀 Installation
 
-### Method 1: Direct from GitHub (Fastest ⚡)
+### Method 1: PyPI (Recommended)
 
 ```bash
-# One-line installation
-pip install git+https://github.com/LEE-Kyungjae/ClaudeCodeLooper.git
+# Install / upgrade to the latest release
+pip install --upgrade claude-code-looper
 
 # Verify installation
 claude-looper --version
 ```
 
-### Method 2: Automated Installation Scripts
+### Method 2: Direct from GitHub (latest main branch)
+
+```bash
+# Install from the tip of main
+pip install --upgrade git+https://github.com/LEE-Kyungjae/ClaudeCodeLooper.git
+```
+
+### Method 3: Automated Installation Scripts
 
 ```bash
 # Clone repository
@@ -72,7 +79,7 @@ cd ClaudeCodeLooper
 install.bat
 ```
 
-### Method 3: Development Installation
+### Method 4: Development Installation
 
 ```bash
 # Clone repository
