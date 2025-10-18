@@ -1,167 +1,186 @@
 # ClaudeCodeLooper
 
-> Automated monitoring and restart system for Claude Code usage limits
+<div align="center">
 
-**ClaudeCodeLooper**는 Claude Code의 5시간 사용 제한을 자동으로 감지하고, 대기 기간 후 자동으로 재시작하는 모니터링 시스템입니다.
+**Automated monitoring and restart system for Claude Code usage limits**
 
-Claude Code usage limit를 걱정 없이 장시간 작업할 수 있도록 도와줍니다.
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
----
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-cli-reference)
 
-## ✨ 주요 기능
-
-- **🔍 자동 감지**: Claude Code 출력을 실시간 모니터링하여 사용 제한 자동 감지
-- **⏰ 정확한 타이밍**: 5시간 대기 기간을 정확하게 추적하고 자동 재시작
-- **🔄 무중단 운영**: 백그라운드 데몬 모드로 작업 중단 없이 모니터링
-- **💬 Claude Code 통합**: 슬래시 커맨드로 간편하게 제어 (`/cl:on`, `/cl:off`, `/cl:status`, `/cl:logs`)
-- **🛡️ 안전성**: 우아한 종료(graceful shutdown) 및 상태 저장으로 시스템 재부팅 후에도 복구 가능
-- **📊 상세 로그**: JSON 형식의 구조화된 로깅으로 모든 이벤트 추적 가능
+</div>
 
 ---
 
-## 📋 요구사항
+## 🎯 Overview
 
-- **Python**: 3.11 이상
-- **OS**: Windows, macOS, Linux (WSL 지원)
-- **Claude Code**: 설치되어 있어야 함
+ClaudeCodeLooper automatically detects Claude Code's 5-hour usage limits, manages the cooldown period, and restarts your session seamlessly. Work for extended periods without interruption or manual intervention.
+
+**Perfect for:**
+- Long coding sessions
+- CI/CD pipelines
+- Automated workflows
+- Production environments
 
 ---
 
-## 🚀 빠른 설치
+## ✨ Features
 
-### 방법 1: GitHub에서 직접 설치 (가장 빠름 ⚡)
+- **🔍 Automatic Detection**: Real-time monitoring of Claude Code output for usage limit patterns
+- **⏰ Precise Timing**: Accurate 5-hour countdown tracking with automatic restart
+- **🔄 Background Operation**: Daemon mode for uninterrupted workflow
+- **💬 Claude Code Integration**: Convenient slash commands (`/cl:on`, `/cl:off`, `/cl:status`, `/cl:logs`)
+- **🛡️ Resilient**: Graceful shutdown and state persistence across system restarts
+- **📊 Comprehensive Logging**: Structured JSON logging for complete event tracking
+- **🔒 Secure**: Shell injection prevention, path traversal protection, input sanitization
+
+---
+
+## 📋 Requirements
+
+- **Python**: 3.11 or higher
+- **OS**: Windows, macOS, Linux (WSL supported)
+- **Claude Code**: Must be installed and accessible
+
+---
+
+## 🚀 Installation
+
+### Method 1: Direct from GitHub (Fastest ⚡)
 
 ```bash
-# 한 줄로 설치 완료!
+# One-line installation
 pip install git+https://github.com/LEE-Kyungjae/ClaudeCodeLooper.git
 
-# 설치 확인
+# Verify installation
 claude-looper --version
 ```
 
-### 방법 2: 자동 설치 스크립트
+### Method 2: Automated Installation Scripts
 
 ```bash
-# 저장소 클론
+# Clone repository
 git clone https://github.com/LEE-Kyungjae/ClaudeCodeLooper.git
 cd ClaudeCodeLooper
 
-# 자동 설치 (macOS/Linux)
+# Run installer (macOS/Linux)
 ./install.sh
 
-# 자동 설치 (Windows)
+# Run installer (Windows)
 install.bat
 ```
 
-### 방법 3: 수동 설치 (개발자용)
+### Method 3: Development Installation
 
 ```bash
-# 저장소 클론
+# Clone repository
 git clone https://github.com/LEE-Kyungjae/ClaudeCodeLooper.git
 cd ClaudeCodeLooper
 
-# 개발 모드로 설치
+# Install in development mode
 pip install -e ".[dev]"
 
-# 또는 일반 설치
+# Or standard installation
 pip install -e .
 ```
 
 ---
 
-## 🎯 빠른 시작
+## 🎯 Quick Start
 
-### 기본 사용법
+### Basic Usage
 
 ```bash
-# 모니터링 시작 (데몬 모드)
+# Start monitoring (daemon mode)
 claude-looper start --claude-cmd "claude" --work-dir "$PWD" --daemon
 
-# 상태 확인
+# Check status
 claude-looper status
 
-# 로그 보기
+# View logs
 claude-looper logs --tail 50
 
-# 모니터링 중지
+# Stop monitoring
 claude-looper stop --all
 ```
 
-### Claude Code에서 슬래시 커맨드로 사용
+### Using Slash Commands in Claude Code
 
-Claude Code를 사용하는 경우 훨씬 간편합니다:
+If you're using Claude Code, it's even simpler:
 
 ```
-/cl:on        # 모니터링 시작
-/cl:status    # 상태 확인
-/cl:logs      # 로그 보기
-/cl:off       # 모니터링 중지
+/cl:on        # Start monitoring
+/cl:status    # Check status
+/cl:logs      # View logs
+/cl:off       # Stop monitoring
 ```
 
-> 💡 **Tip**: 슬래시 커맨드는 자동으로 출력을 포맷팅하고 이모지로 시각화해줍니다!
+> 💡 **Tip**: Slash commands automatically format output with emoji indicators for better readability!
 
 ---
 
-## 📖 사용 시나리오
+## 📖 Usage Scenarios
 
-### 시나리오 1: 장시간 코딩 세션
+### Scenario 1: Extended Coding Session
 
 ```bash
-# 아침에 작업 시작
+# Start work in the morning
 /cl:on
 
-# [일반적으로 작업하기]
-# [5시간 제한에 도달하면 자동으로 감지]
-# [시스템이 5시간 대기]
-# [자동으로 Claude Code 재시작]
+# [Work normally throughout the day]
+# [System automatically detects when 5-hour limit is reached]
+# [System waits for 5-hour cooldown period]
+# [Claude Code automatically restarts]
 
-# 저녁에 작업 종료
+# Finish work in the evening
 /cl:off
 ```
 
-### 시나리오 2: CI/CD 파이프라인
+### Scenario 2: CI/CD Pipeline Integration
 
 ```bash
-# 자동화된 워크플로우에서 사용
+# Use in automated workflow
 claude-looper start \
   --claude-cmd "claude --no-interactive" \
   --work-dir "/path/to/project" \
   --daemon
 
-# 파이프라인 작업 수행
+# Run pipeline tasks
 # ...
 
-# 완료 후 정리
+# Clean up after completion
 claude-looper stop --all
 ```
 
-### 시나리오 3: 여러 프로젝트 동시 모니터링
+### Scenario 3: Multi-Project Monitoring
 
 ```bash
-# 프로젝트 A 모니터링
+# Monitor Project A
 cd /path/to/project-a
 claude-looper start --claude-cmd "claude" --daemon
 
-# 프로젝트 B 모니터링
+# Monitor Project B
 cd /path/to/project-b
 claude-looper start --claude-cmd "claude" --daemon
 
-# 모든 세션 상태 확인
+# Check all session statuses
 claude-looper status --verbose
 ```
 
 ---
 
-## ⚙️ 설정
+## ⚙️ Configuration
 
-### 설정 파일 위치
+### Configuration File Locations
 
-- **기본 설정**: `config/default.json`
-- **사용자 설정**: `.claude-restart-config.json` (프로젝트 루트에 생성)
+- **Default Config**: `config/default.json`
+- **User Config**: `.claude-restart-config.json` (create in project root)
 
-### 설정 예제
+### Configuration Example
 
-`.claude-restart-config.json` 파일을 만들어 커스터마이징:
+Create `.claude-restart-config.json` to customize settings:
 
 ```json
 {
@@ -189,242 +208,266 @@ claude-looper status --verbose
 
 ---
 
-## 🔧 CLI 명령어 레퍼런스
+## 🔧 CLI Command Reference
 
-### `start` - 모니터링 시작
+### `start` - Start monitoring
 
 ```bash
 claude-looper start [OPTIONS]
 
 Options:
-  --claude-cmd TEXT       Claude Code 실행 명령어 [default: claude]
-  --work-dir TEXT         작업 디렉토리 [default: current directory]
-  --daemon                백그라운드 데몬 모드
-  --config TEXT           설정 파일 경로
-  --session-id TEXT       세션 ID (자동 생성 가능)
+  --claude-cmd TEXT       Claude Code command to run [default: claude]
+  --work-dir TEXT         Working directory [default: current directory]
+  --daemon                Run in background daemon mode
+  --config TEXT           Path to config file
+  --session-id TEXT       Session ID (optional; auto-generated)
 ```
 
-**예제:**
+**Examples:**
 ```bash
-# 기본 시작
+# Start with defaults
 claude-looper start
 
-# 데몬 모드로 시작
+# Run as a daemon
 claude-looper start --daemon
 
-# 커스텀 설정으로 시작
+# Start with a custom config
 claude-looper start --config /path/to/config.json --daemon
 ```
 
-### `stop` - 모니터링 중지
+### `stop` - Stop monitoring
 
 ```bash
 claude-looper stop [OPTIONS]
 
 Options:
-  --session-id TEXT       특정 세션 중지
-  --all                   모든 세션 중지
-  --force                 강제 종료
+  --session-id TEXT       Stop a specific session
+  --all                   Stop all sessions
+  --force                 Force shutdown
 ```
 
-**예제:**
+**Examples:**
 ```bash
-# 모든 세션 정상 종료
+# Gracefully stop every session
 claude-looper stop --all
 
-# 특정 세션 중지
+# Stop a particular session
 claude-looper stop --session-id sess_abc123
 
-# 강제 종료
+# Force termination
 claude-looper stop --all --force
 ```
 
-### `status` - 상태 확인
+### `status` - Check current status
 
 ```bash
 claude-looper status [OPTIONS]
 
 Options:
-  --verbose               상세 정보 표시
-  --format [text|json]    출력 형식
-  --session-id TEXT       특정 세션 상태
+  --verbose               Show detailed information
+  --format [text|json]    Output format
+  --session-id TEXT       Status of a specific session
 ```
 
-**예제:**
+**Examples:**
 ```bash
-# 기본 상태
+# Basic status
 claude-looper status
 
-# 상세 정보
+# Detailed output
 claude-looper status --verbose
 
-# JSON 형식
+# JSON output
 claude-looper status --format json
 ```
 
-### `logs` - 로그 보기
+### `logs` - View logs
 
 ```bash
 claude-looper logs [OPTIONS]
 
 Options:
-  --tail INTEGER          마지막 N줄 표시 [default: 50]
-  --follow                실시간 로그 스트리밍
-  --filter TEXT           필터 (detection, error, warning)
-  --session-id TEXT       특정 세션 로그
+  --tail INTEGER          Show the last N lines [default: 50]
+  --follow                Stream logs in real time
+  --filter TEXT           Filter logs (detection, error, warning)
+  --session-id TEXT       Logs for a specific session
 ```
 
-**예제:**
+**Examples:**
 ```bash
-# 최근 50줄
+# Last 50 lines
 claude-looper logs
 
-# 최근 100줄
+# Last 100 lines
 claude-looper logs --tail 100
 
-# 실시간 스트리밍
+# Live stream
 claude-looper logs --follow
 
-# 에러만 필터링
+# Only errors
 claude-looper logs --filter error
 
-# 감지 이벤트만
+# Detection events only
 claude-looper logs --filter detection
 ```
 
-### `config` - 설정 관리
+### `config` - Manage configuration
 
 ```bash
 claude-looper config [OPTIONS]
 
 Options:
-  --show                  현재 설정 표시
-  --set KEY VALUE         설정 값 변경
-  --reset                 기본값으로 리셋
+  --show                  Display the current configuration
+  --set KEY VALUE         Change a configuration value
+  --reset                 Reset to defaults
 ```
 
-**예제:**
+**Examples:**
 ```bash
-# 현재 설정 보기
+# View configuration
 claude-looper config --show
 
-# 대기 시간 변경
+# Change wait time
 claude-looper config --set timing.wait_hours 6
 
-# 기본값 복구
+# Reset to defaults
 claude-looper config --reset
+```
+
+### `queue` - Manage post-restart tasks
+
+```bash
+claude-looper queue [COMMAND]
+
+Commands:
+  add <text>        Add a task that runs after the next restart
+  list              Show queued tasks in execution order
+  remove <nums...>  Remove tasks by their list numbers
+  clear             Clear the queue (use --confirm to skip prompt)
+```
+
+**Examples:**
+```bash
+# Add a follow-up task
+claude-looper queue add "코드 점검"
+
+# Inspect the queue
+claude-looper queue list
+
+# Remove tasks 1 and 3
+claude-looper queue remove 1 3
 ```
 
 ---
 
-## 🐛 문제 해결
+## 🐛 Troubleshooting
 
-### 모니터링이 시작되지 않아요
+### Monitoring won't start
 
 ```bash
-# 1. 로그 확인
+# 1. Inspect logs
 claude-looper logs --filter error
 
-# 2. 권한 확인
+# 2. Check permissions
 ls -la logs/
 
-# 3. Python 버전 확인
-python --version  # 3.11 이상이어야 함
+# 3. Confirm Python version
+python --version  # Requires 3.11+
 
-# 4. 의존성 재설치
+# 4. Reinstall dependencies
 pip install -r requirements.txt --force-reinstall
 ```
 
-### 자동 재시작이 안 돼요
+### Automatic restart isn't working
 
 ```bash
-# 1. 감지 패턴 확인
+# 1. Check detection patterns
 claude-looper logs --filter detection
 
-# 2. 설정 확인
+# 2. Verify configuration
 claude-looper config --show
 
-# 3. 상세 상태 확인
+# 3. Inspect detailed status
 claude-looper status --verbose
 ```
 
-### Claude Code를 찾을 수 없다고 나와요
+### Claude Code command not found
 
 ```bash
-# 1. Claude Code 설치 확인
+# 1. Confirm Claude Code is installed
 which claude
 
-# 2. PATH 설정 확인
+# 2. Check PATH
 echo $PATH
 
-# 3. 절대 경로로 지정
+# 3. Use an absolute path
 claude-looper start --claude-cmd "/full/path/to/claude"
 ```
 
-### 로그 파일이 너무 커요
+### Log file is too large
 
 ```bash
-# 로그 파일 정리
+# Clean up the log file
 rm logs/claude-restart-monitor.log
 
-# 또는 로그 레벨 조정
+# Or reduce the log level
 claude-looper config --set logging.level WARNING
 ```
 
 ---
 
-## 👨‍💻 개발자 가이드
+## 👨‍💻 Developer Guide
 
-### 개발 환경 설정
+### Set up the development environment
 
 ```bash
-# 저장소 클론
+# Clone repository
 git clone https://github.com/LEE-Kyungjae/ClaudeCodeLooper.git
 cd ClaudeCodeLooper
 
-# 개발 모드로 설치
+# Install in development mode
 pip install -e ".[dev]"
 
-# 테스트 실행
+# Run tests
 pytest tests/ -v
 
-# 코드 품질 검사
+# Lint and type-check
 black src/ tests/
 flake8 src/ tests/
 mypy src/
 ```
 
-### 프로젝트 구조
+### Project structure
 
 ```
 ClaudeCodeLooper/
 ├── src/
-│   ├── cli/                 # CLI 인터페이스
+│   ├── cli/                 # CLI interface
 │   │   ├── main.py
-│   │   └── commands/        # 각 명령어 구현
-│   ├── models/              # 데이터 모델 (Pydantic)
-│   ├── services/            # 핵심 서비스
-│   │   ├── process_monitor.py      # 프로세스 모니터링 오케스트레이터
-│   │   ├── process_launcher.py     # 프로세스 실행 관리
-│   │   ├── output_capture.py       # 출력 캡처
-│   │   ├── health_checker.py       # 상태 모니터링
-│   │   ├── pattern_detector.py     # 패턴 감지
-│   │   └── restart_controller.py   # 재시작 제어
-│   ├── utils/               # 유틸리티
-│   │   └── logging.py       # 구조화된 로깅
-│   └── exceptions.py        # 예외 계층
+│   │   └── commands/        # Command implementations
+│   ├── models/              # Data models (Pydantic)
+│   ├── services/            # Core services
+│   │   ├── process_monitor.py      # Process monitoring orchestrator
+│   │   ├── process_launcher.py     # Process launch management
+│   │   ├── output_capture.py       # Output capture
+│   │   ├── health_checker.py       # Health monitoring
+│   │   ├── pattern_detector.py     # Pattern detection
+│   │   └── restart_controller.py   # Restart control
+│   ├── utils/               # Utilities
+│   │   └── logging.py       # Structured logging
+│   └── exceptions.py        # Exception hierarchy
 ├── tests/
-│   ├── contract/            # 계약 테스트
-│   ├── integration/         # 통합 테스트
-│   └── unit/                # 단위 테스트
+│   ├── contract/            # Contract tests
+│   ├── integration/         # Integration tests
+│   └── unit/                # Unit tests
 ├── config/
-│   └── default.json         # 기본 설정
+│   └── default.json         # Default configuration
 ├── .claude/
-│   └── commands/            # Claude Code 슬래시 커맨드
-└── docs/                    # 추가 문서
+│   └── commands/            # Claude Code slash commands
+└── docs/                    # Additional documentation
 ```
 
-### 테스트 작성
+### Writing tests
 
 ```python
 # tests/unit/services/test_example.py
@@ -437,30 +480,30 @@ def test_monitor_initialization():
 
 @pytest.mark.asyncio
 async def test_async_operation():
-    # 비동기 테스트 예제
+    # Async test example
     pass
 ```
 
-### 새 기능 추가하기
+### Adding a new feature
 
-1. **브랜치 생성**: `git checkout -b feature/your-feature`
-2. **테스트 작성**: TDD 방식으로 먼저 테스트 작성
-3. **구현**: 테스트를 통과하도록 구현
-4. **품질 검사**: `black`, `flake8`, `mypy` 실행
-5. **커밋**: 명확한 커밋 메시지 작성
-6. **Pull Request**: 메인 브랜치에 PR 생성
-
----
-
-## 📄 라이선스
-
-MIT License - 자유롭게 사용, 수정, 배포할 수 있습니다.
+1. **Create a branch**: `git checkout -b feature/your-feature`
+2. **Write tests**: Start with TDD when possible
+3. **Implement**: Make the tests pass
+4. **Run quality checks**: Execute `black`, `flake8`, and `mypy`
+5. **Commit**: Use clear, descriptive messages
+6. **Open a Pull Request**: Target the main branch
 
 ---
 
-## 🤝 기여하기
+## 📄 License
 
-버그 리포트, 기능 제안, Pull Request 환영합니다!
+MIT License - free to use, modify, and distribute.
+
+---
+
+## 🤝 Contributing
+
+Bug reports, feature suggestions, and pull requests are always welcome!
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
@@ -470,7 +513,7 @@ MIT License - 자유롭게 사용, 수정, 배포할 수 있습니다.
 
 ---
 
-## 📞 지원
+## 📞 Support
 
 - **Issues**: [GitHub Issues](https://github.com/LEE-Kyungjae/ClaudeCodeLooper/issues)
 - **Documentation**: [Wiki](https://github.com/LEE-Kyungjae/ClaudeCodeLooper/wiki)
@@ -478,10 +521,10 @@ MIT License - 자유롭게 사용, 수정, 배포할 수 있습니다.
 
 ---
 
-## 🙏 감사의 말
+## 🙏 Acknowledgments
 
-Claude Code를 더 편하게 사용할 수 있도록 이 프로젝트를 만들었습니다.
-피드백과 기여를 환영합니다!
+We built this project to make working with Claude Code easier.
+Feedback and contributions are appreciated!
 
 ---
 

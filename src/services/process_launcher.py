@@ -101,6 +101,7 @@ class ProcessLauncher:
                 cmd_list,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
+                stdin=subprocess.PIPE,
                 universal_newlines=True,
                 bufsize=1,
                 cwd=work_dir,

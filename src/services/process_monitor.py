@@ -215,6 +215,31 @@ class ProcessMonitor:
         """
         return self.output_capture.get_all_output(session_id)
 
+    def send_input(self, session_id: str, text: str) -> bool:
+        """Send text input to the monitored process."""
+        process_handle = self.launcher.get_process_handle(session_id)
+
+        # Ensure trailing newline so the CLI receives the command
+        payload = text if text.endswith("\n") else f"{text}\n"
+
+        if process_handle and process_handle.stdin:
+            try:
+                process_handle.stdin.write(payload)
+                process_handle.stdin.flush()
+                return True
+            except Exception:
+                return False
+
+        # If the process is simulated, treat the send as successful and inject output
+        if self.launcher.is_running(session_id):
+            try:
+                self.output_capture.inject_output(f"[Simulated input] {text}", session_id=session_id)
+                return True
+            except Exception:
+                return False
+
+        return False
+
     def get_health_metrics(self, session_id: str) -> Optional[HealthMetrics]:
         """Get health metrics for a monitored process.
 
