@@ -80,7 +80,12 @@ def cli(ctx: CLIContext, config: Optional[str], verbose: bool, quiet: bool, vers
 
         # Determine test mode
         env_test_mode = os.getenv("CLAUDE_RESTART_TEST_MODE")
-        ctx.test_mode = bool(ctx.config.is_test_mode_enabled() or (env_test_mode and env_test_mode != "0"))
+        running_tests = os.getenv("PYTEST_CURRENT_TEST")
+        ctx.test_mode = bool(
+            ctx.config.is_test_mode_enabled()
+            or (env_test_mode and env_test_mode != "0")
+            or running_tests
+        )
 
         if ctx.test_mode and not ctx.config.allows_process_simulation():
             ctx.config.monitoring["allow_process_simulation"] = True
