@@ -328,16 +328,6 @@ class SystemConfiguration(BaseModel):
         """Create a default configuration instance."""
         return cls()
 
-    @classmethod
-    def from_file(cls, file_path: str) -> "SystemConfiguration":
-        """Load configuration from JSON file."""
-        import json
-
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
-        return cls(**data)
-
     def to_file(self, file_path: str) -> None:
         """Save configuration to JSON file."""
         import json
@@ -374,3 +364,30 @@ class SystemConfiguration(BaseModel):
             f"detection_patterns={len(self.detection_patterns)} patterns"
             f")"
         )
+
+    @staticmethod
+    def _merge_dict(base: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
+        """Deep merge helper for configuration dictionaries."""
+        result = base.copy()
+        for key, value in overrides.items():
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
+                result[key] = SystemConfiguration._merge_dict(result[key], value)
+            else:
+                result[key] = value
+        return result
+
+    @classmethod
+    def from_file(cls, file_path: str) -> "SystemConfiguration":
+        """Load configuration from JSON file with default merge."""
+        import json
+
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        default_dict = cls.create_default().dict()
+        merged = cls._merge_dict(default_dict, data)
+        return cls(**merged)
