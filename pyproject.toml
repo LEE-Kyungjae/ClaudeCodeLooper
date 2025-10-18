@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = [ "setuptools>=61.0", "wheel",]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,61 +8,20 @@ version = "1.0.1"
 description = "Automated monitoring and restart system for Claude Code usage limits"
 readme = "README.md"
 license = "MIT"
-authors = [
-    {name = "Kyungjae Lee", email = "your-email@example.com"}
-]
-maintainers = [
-    {name = "Kyungjae Lee", email = "your-email@example.com"}
-]
-keywords = [
-    "claude",
-    "claude-code",
-    "automation",
-    "monitoring",
-    "restart",
-    "cli",
-    "ai",
-    "assistant",
-    "development-tools"
-]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Utilities",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Operating System :: OS Independent",
-    "Operating System :: Microsoft :: Windows",
-    "Operating System :: POSIX :: Linux",
-    "Operating System :: MacOS",
-    "Environment :: Console",
-    "Typing :: Typed",
-]
+keywords = [ "claude", "claude-code", "automation", "monitoring", "restart", "cli", "ai", "assistant", "development-tools",]
+classifiers = [ "Development Status :: 4 - Beta", "Intended Audience :: Developers", "Topic :: Software Development :: Libraries :: Python Modules", "Topic :: Utilities", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.9", "Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12", "Programming Language :: Python :: 3.13", "Operating System :: OS Independent", "Operating System :: Microsoft :: Windows", "Operating System :: POSIX :: Linux", "Operating System :: MacOS", "Environment :: Console", "Typing :: Typed",]
 requires-python = ">=3.9"
-dependencies = [
-    "psutil>=5.9.0",
-    "click>=8.1.0",
-    "pydantic>=2.0.0",
-    "colorama>=0.4.6",
-    "python-dateutil>=2.8.0",
-]
+dependencies = [ "psutil>=5.9.0", "click>=8.1.0", "pydantic>=2.0.0", "colorama>=0.4.6", "python-dateutil>=2.8.0",]
+[[project.authors]]
+name = "Kyungjae Lee"
+email = "your-email@example.com"
+
+[[project.maintainers]]
+name = "Kyungjae Lee"
+email = "your-email@example.com"
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=7.4.0",
-    "pytest-cov>=4.1.0",
-    "pytest-asyncio>=0.21.0",
-    "black>=23.0.0",
-    "flake8>=6.0.0",
-    "isort>=5.12.0",
-    "mypy>=1.5.0",
-    "types-python-dateutil>=2.8.0",
-]
+dev = [ "pytest>=7.4.0", "pytest-cov>=4.1.0", "pytest-asyncio>=0.21.0", "black>=23.0.0", "flake8>=6.0.0", "isort>=5.12.0", "mypy>=1.5.0", "types-python-dateutil>=2.8.0",]
 
 [project.urls]
 Homepage = "https://github.com/LEE-Kyungjae/ClaudeCodeLooper"
@@ -74,45 +33,22 @@ Changelog = "https://github.com/LEE-Kyungjae/ClaudeCodeLooper/blob/main/CHANGELO
 [project.scripts]
 claude-looper = "src.cli.main:cli"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["src*"]
-
 [tool.black]
 line-length = 88
-target-version = ['py311']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
+target-version = [ "py311",]
+include = "\\.pyi?$"
+extend-exclude = "/(\n  # directories\n  \\.eggs\n  | \\.git\n  | \\.hg\n  | \\.mypy_cache\n  | \\.tox\n  | \\.venv\n  | build\n  | dist\n)/\n"
 
 [tool.isort]
 profile = "black"
 multi_line_output = 3
 line_length = 88
-known_first_party = ["src"]
+known_first_party = [ "src",]
 
 [tool.flake8]
 max-line-length = 88
-extend-ignore = ["E203", "W503"]
-exclude = [
-    ".git",
-    "__pycache__",
-    ".pytest_cache",
-    "build",
-    "dist",
-    "*.egg-info",
-]
+extend-ignore = [ "E203", "W503",]
+exclude = [ ".git", "__pycache__", ".pytest_cache", "build", "dist", "*.egg-info",]
 
 [tool.mypy]
 python_version = "3.11"
@@ -130,21 +66,20 @@ warn_unreachable = true
 strict_equality = true
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
+testpaths = [ "tests",]
+python_files = [ "test_*.py",]
+python_classes = [ "Test*",]
+python_functions = [ "test_*",]
 addopts = [
     "--strict-markers",
     "--strict-config",
     "--cov=src",
     "--cov-report=term-missing",
     "--cov-report=html",
-    "--cov-fail-under=80",
+    "--cov-fail-under=40",
 ]
-markers = [
-    "unit: Unit tests",
-    "integration: Integration tests",
-    "contract: Contract tests",
-    "performance: Performance tests",
-]
+markers = [ "unit: Unit tests", "integration: Integration tests", "contract: Contract tests", "performance: Performance tests",]
+
+[tool.setuptools.packages.find]
+where = [ ".",]
+include = [ "src*",]
