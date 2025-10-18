@@ -5,7 +5,7 @@ remaining duration, and completion callback information.
 """
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, Callable
+from typing import Optional, Dict, Any, Callable, List
 from pydantic import BaseModel, Field, validator
 from enum import Enum
 

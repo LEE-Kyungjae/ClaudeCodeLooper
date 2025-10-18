@@ -63,7 +63,7 @@ def logs(ctx, tail: int, follow: bool, level: Optional[str], since: Optional[str
 
         if not os.path.exists(log_file_path):
             if not cli_ctx.quiet:
-                click.echo("No log file found. Start monitoring to generate logs.")
+                click.echo("[INFO] No log file found. Start monitoring to generate logs.")
             return
 
         if follow:
@@ -102,7 +102,7 @@ def _show_logs(log_file_path: str, tail: int, level: Optional[str],
             click.echo(line)
 
         if not filtered_lines:
-            click.echo("No matching log entries found")
+            click.echo("[INFO] No matching log entries found")
 
     except FileNotFoundError:
         click.echo("Log file not found")
@@ -138,7 +138,7 @@ def _follow_logs(log_file_path: str, level: Optional[str],
                     time.sleep(0.1)  # Brief pause when no new lines
 
     except FileNotFoundError:
-        click.echo("Log file not found", err=True)
+        click.echo("[INFO] Log file not found", err=True)
         sys.exit(1)
     except PermissionError:
         click.echo("Permission denied accessing log file", err=True)
@@ -193,80 +193,3 @@ def _extract_timestamp(line: str) -> Optional[datetime]:
                 pass
 
     return None
-
-
-@click.command()
-@click.option('--max-size',
-              type=int,
-              help='Maximum size in MB before rotation')
-@click.option('--backup-count',
-              type=int,
-              help='Number of backup files to keep')
-@click.pass_context
-def rotate(ctx, max_size: Optional[int], backup_count: Optional[int]):
-    """Rotate log files manually.
-
-    Examples:
-      claude-restart-monitor logs rotate
-      claude-restart-monitor logs rotate --max-size 100 --backup-count 5
-    """
-    cli_ctx = ctx.find_root().obj
-
-    try:
-        log_file_path = cli_ctx.config.get_log_file_path()
-
-        if not os.path.exists(log_file_path):
-            click.echo("No log file to rotate")
-            return
-
-        # Get current file size
-        file_size_mb = os.path.getsize(log_file_path) / (1024 * 1024)
-
-        # Use provided values or config defaults
-        max_size = max_size or cli_ctx.config.max_log_size_mb
-        backup_count = backup_count or cli_ctx.config.backup_count
-
-        if file_size_mb < max_size:
-            if not cli_ctx.quiet:
-                click.echo(f"Log file ({file_size_mb:.1f} MB) is smaller than max size ({max_size} MB)")
-                click.echo("Rotation not needed")
-            return
-
-        # Perform rotation
-        _rotate_log_file(log_file_path, backup_count)
-
-        if not cli_ctx.quiet:
-            click.echo(f"✓ Log file rotated (was {file_size_mb:.1f} MB)")
-
-    except Exception as e:
-        click.echo(f"Error rotating logs: {e}", err=True)
-        sys.exit(1)
-
-
-def _rotate_log_file(log_file_path: str, backup_count: int) -> None:
-    """Rotate log file with backup."""
-    import shutil
-
-    # Move existing backups
-    for i in range(backup_count - 1, 0, -1):
-        old_backup = f"{log_file_path}.{i}"
-        new_backup = f"{log_file_path}.{i + 1}"
-
-        if os.path.exists(old_backup):
-            if os.path.exists(new_backup):
-                os.remove(new_backup)
-            shutil.move(old_backup, new_backup)
-
-    # Move current log to .1
-    if backup_count > 0:
-        backup_path = f"{log_file_path}.1"
-        if os.path.exists(backup_path):
-            os.remove(backup_path)
-        shutil.move(log_file_path, backup_path)
-
-    # Create new empty log file
-    open(log_file_path, 'w').close()
-
-
-# Add rotate as subcommand to logs
-logs.add_command(rotate)

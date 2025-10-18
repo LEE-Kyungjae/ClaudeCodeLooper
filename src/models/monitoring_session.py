@@ -9,6 +9,8 @@ from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field, validator
 from enum import Enum
 
+from .restart_command_config import RestartCommandConfiguration
+
 
 class SessionStatus(str, Enum):
     """Possible states of a monitoring session."""
@@ -38,6 +40,7 @@ class MonitoringSession(BaseModel):
     waiting_period_id: Optional[str] = Field(default=None)
     error_count: int = Field(default=0, ge=0)
     last_error: Optional[str] = Field(default=None)
+    restart_config: Optional[RestartCommandConfiguration] = Field(default=None)
 
     class Config:
         """Pydantic configuration."""
@@ -139,6 +142,7 @@ class MonitoringSession(BaseModel):
             "waiting_period_id": self.waiting_period_id,
             "error_count": self.error_count,
             "last_error": self.last_error,
+            "restart_config": self.restart_config.to_dict() if self.restart_config else None,
             "uptime_seconds": self.get_uptime_seconds()
         }
 
@@ -155,7 +159,11 @@ class MonitoringSession(BaseModel):
         # Remove computed fields
         data.pop("uptime_seconds", None)
 
-        return cls(**data)
+        restart_config_data = data.pop("restart_config", None)
+        instance = cls(**data)
+        if restart_config_data:
+            instance.restart_config = RestartCommandConfiguration.from_dict(restart_config_data)
+        return instance
 
     def __str__(self) -> str:
         """String representation of the session."""

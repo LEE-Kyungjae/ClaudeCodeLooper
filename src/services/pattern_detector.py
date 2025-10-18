@@ -95,6 +95,7 @@ class PatternDetector:
                     if result.matched:
                         event = self._create_detection_event(result)
                         self.detection_history.append(event)
+                        self.detection_count += 1
                         self.last_detection_time = datetime.now()
                         return event
 
@@ -106,7 +107,14 @@ class PatternDetector:
             self.total_processing_time += processing_time
 
     def _check_line_for_patterns(self, line: str, line_number: int) -> DetectionResult:
-        """Check a single line against all patterns."""
+        """Check a single line against all patterns.
+
+        Performance optimizations:
+        - Early return on empty lines
+        - Skip system messages before pattern matching
+        - Early exit when high-confidence match found (>0.9)
+        - Patterns ordered by priority (earlier = more specific)
+        """
         if not line.strip():
             return DetectionResult(matched=False)
 
@@ -116,6 +124,7 @@ class PatternDetector:
 
         best_match = DetectionResult(matched=False)
         best_confidence = 0.0
+        confidence_threshold = self.config.monitoring.get("confidence_threshold", 0.5)
 
         for i, pattern in enumerate(self.compiled_patterns):
             match = pattern.search(line)
@@ -139,8 +148,11 @@ class PatternDetector:
                         context_after=self._get_context_after(line_number)
                     )
 
+                    # Early exit optimization: if very high confidence, no need to check more
+                    if confidence > 0.9:
+                        return best_match
+
         # Only return matches above confidence threshold
-        confidence_threshold = self.config.monitoring.get("confidence_threshold", 0.5)
         if best_match.matched and best_match.confidence >= confidence_threshold:
             return best_match
 

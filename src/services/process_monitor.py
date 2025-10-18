@@ -1,81 +1,48 @@
-"""ProcessMonitor service for Claude Code process management.
+"""ProcessMonitor service - Orchestrator for process management services.
 
-Handles starting, monitoring, and managing Claude Code processes including
-real-time output capture, health monitoring, and Windows-specific features.
+Coordinates ProcessLauncher, OutputCapture, and HealthChecker to provide
+unified process monitoring and management capabilities.
+
+This refactored version delegates to specialized services for better
+maintainability and separation of concerns.
 """
-import os
-import sys
 import time
-import psutil
-import subprocess
-import threading
-import queue
-import signal
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Callable, TextIO
-from dataclasses import dataclass
-from enum import Enum
+from datetime import datetime
+from typing import Dict, List, Optional, Any
 
 from ..models.system_configuration import SystemConfiguration
+from ..exceptions import ProcessStartError, ProcessStopError, ProcessNotFoundError
 
-
-class ProcessState(Enum):
-    """Process monitoring states."""
-    UNKNOWN = "unknown"
-    STARTING = "starting"
-    RUNNING = "running"
-    STOPPING = "stopping"
-    STOPPED = "stopped"
-    CRASHED = "crashed"
-    ZOMBIE = "zombie"
-
-
-@dataclass
-class ProcessInfo:
-    """Information about a monitored process."""
-    pid: int
-    session_id: str
-    command: str
-    start_time: datetime
-    status: ProcessState
-    cpu_percent: float = 0.0
-    memory_mb: float = 0.0
-    open_files: int = 0
-
-
-@dataclass
-class HealthMetrics:
-    """Process health metrics."""
-    cpu_percent: float
-    memory_usage: float
-    memory_mb: float
-    status: str
-    open_files: int
-    thread_count: int
-    uptime_seconds: float
+# Import specialized services
+from .process_launcher import ProcessLauncher, LaunchResult
+from .output_capture import OutputCapture
+from .health_checker import HealthChecker, ProcessInfo, HealthMetrics, ProcessState
 
 
 class ProcessMonitor:
-    """Service for monitoring Claude Code processes."""
+    """Orchestrator service for unified process monitoring.
+
+    Delegates to specialized services:
+    - ProcessLauncher: Process lifecycle (start/stop)
+    - OutputCapture: Output stream management
+    - HealthChecker: Health metrics and status monitoring
+    """
 
     def __init__(self, config: SystemConfiguration):
-        """Initialize the process monitor."""
+        """Initialize the process monitor orchestrator.
+
+        Args:
+            config: System configuration
+        """
         self.config = config
+
+        # Initialize specialized services
+        self.launcher = ProcessLauncher(config)
+        self.output_capture = OutputCapture(config)
+        self.health_checker = HealthChecker(config)
+
+        # Track active sessions
         self.monitored_processes: Dict[str, ProcessInfo] = {}
-        self.output_queues: Dict[str, queue.Queue] = {}
-        self.output_threads: Dict[str, threading.Thread] = {}
-        self.monitoring_active = False
-        self.monitoring_thread: Optional[threading.Thread] = None
-        self._lock = threading.RLock()
-        self._shutdown_event = threading.Event()
-
-        # Output capture settings
-        self.output_buffer_size = config.monitoring.get("output_buffer_size", 1000)
-        self.check_interval = config.monitoring.get("check_interval", 1.0)
-
-        # Performance settings
-        self.max_memory_mb = config.performance.get("max_memory_mb", 500)
-        self.cpu_limit_percent = config.performance.get("cpu_limit_percent", 20)
 
     def start_monitoring(
         self,
@@ -84,12 +51,11 @@ class ProcessMonitor:
         work_dir: Optional[str] = None,
         env_vars: Optional[Dict[str, str]] = None
     ) -> ProcessInfo:
-        """
-        Start monitoring a Claude Code process.
+        """Start monitoring a Claude Code process.
 
         Args:
             command: Command to execute
-            session_id: Session identifier
+            session_id: Session identifier (auto-generated if None)
             work_dir: Working directory
             env_vars: Environment variables
 
@@ -97,7 +63,7 @@ class ProcessMonitor:
             ProcessInfo object with process details
 
         Raises:
-            RuntimeError: If process fails to start
+            ProcessStartError: If process fails to start
             ValueError: If command is invalid
         """
         if not command or not command.strip():
@@ -106,84 +72,55 @@ class ProcessMonitor:
         if session_id is None:
             session_id = f"proc_{int(time.time())}"
 
-        with self._lock:
-            if session_id in self.monitored_processes:
-                raise ValueError(f"Session {session_id} is already being monitored")
+        # Check if session already exists
+        if session_id in self.monitored_processes:
+            raise ProcessStartError(
+                f"Session {session_id} is already being monitored",
+                details={"session_id": session_id}
+            )
 
-            # Prepare environment
-            env = os.environ.copy()
-            if env_vars:
-                env.update(env_vars)
+        try:
+            # Launch process
+            launch_result = self.launcher.launch_process(
+                command=command,
+                session_id=session_id,
+                work_dir=work_dir,
+                env_vars=env_vars
+            )
 
-            # Validate working directory
-            if work_dir:
-                work_dir = os.path.expandvars(os.path.expanduser(work_dir))
-                if not os.path.exists(work_dir):
-                    raise ValueError(f"Working directory does not exist: {work_dir}")
+            # Register with health checker
+            process_info = self.health_checker.register_process(
+                session_id=session_id,
+                pid=launch_result.pid,
+                command=launch_result.command,
+                start_time=launch_result.start_time
+            )
 
-            try:
-                # Start the process
-                process = subprocess.Popen(
-                    command,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    universal_newlines=True,
-                    bufsize=1,
-                    cwd=work_dir,
-                    env=env,
-                    shell=self.config.security.get("allow_shell_commands", False)
-                )
-
-                # Create process info
-                process_info = ProcessInfo(
-                    pid=process.pid,
+            # Start output capture (if we have a real process handle)
+            if launch_result.process_handle:
+                self.output_capture.start_capture(
                     session_id=session_id,
-                    command=command,
-                    start_time=datetime.now(),
-                    status=ProcessState.STARTING
+                    process=launch_result.process_handle
                 )
 
-                # Set up output capture
-                output_queue = queue.Queue(maxsize=self.output_buffer_size)
-                self.output_queues[session_id] = output_queue
+            # Track session
+            self.monitored_processes[session_id] = process_info
 
-                # Start output capture thread
-                output_thread = threading.Thread(
-                    target=self._capture_output,
-                    args=(process, output_queue, session_id),
-                    daemon=True
-                )
-                output_thread.start()
-                self.output_threads[session_id] = output_thread
-
-                # Store process info
-                self.monitored_processes[session_id] = process_info
-
-                # Start monitoring if not already running
-                if not self.monitoring_active:
-                    self._start_monitoring_thread()
-
-                # Wait a moment to check if process started successfully
-                time.sleep(0.1)
-                if process.poll() is not None:
-                    # Process exited immediately
-                    self._cleanup_process(session_id)
-                    raise RuntimeError(f"Process exited immediately with code {process.returncode}")
-
+            # Update initial status
+            if self.launcher.is_running(session_id):
                 process_info.status = ProcessState.RUNNING
-                return process_info
+            else:
+                process_info.status = ProcessState.STOPPED
 
-            except subprocess.SubprocessError as e:
-                raise RuntimeError(f"Failed to start process: {e}")
-            except Exception as e:
-                # Cleanup on failure
-                if session_id in self.monitored_processes:
-                    self._cleanup_process(session_id)
-                raise RuntimeError(f"Unexpected error starting process: {e}")
+            return process_info
+
+        except Exception as e:
+            # Clean up on failure
+            self._cleanup_session(session_id)
+            raise
 
     def stop_monitoring(self, session_id: Optional[str] = None) -> bool:
-        """
-        Stop monitoring a process or all processes.
+        """Stop monitoring a process or all processes.
 
         Args:
             session_id: Specific session to stop, or None for all
@@ -191,44 +128,45 @@ class ProcessMonitor:
         Returns:
             True if processes were stopped successfully
         """
-        with self._lock:
-            if session_id:
-                return self._stop_single_process(session_id)
-            else:
-                return self._stop_all_processes()
+        if session_id:
+            return self._stop_single_process(session_id)
+        else:
+            return self._stop_all_processes()
 
     def _stop_single_process(self, session_id: str) -> bool:
-        """Stop monitoring a single process."""
+        """Stop monitoring a single process.
+
+        Args:
+            session_id: Session to stop
+
+        Returns:
+            True if successful
+        """
         if session_id not in self.monitored_processes:
             return False
 
-        process_info = self.monitored_processes[session_id]
-        process_info.status = ProcessState.STOPPING
-
         try:
-            # Try to terminate the process gracefully
-            if psutil.pid_exists(process_info.pid):
-                process = psutil.Process(process_info.pid)
-                process.terminate()
+            # Stop the process
+            self.launcher.stop_process(session_id, force=False, timeout=5.0)
 
-                # Wait for graceful termination
-                try:
-                    process.wait(timeout=5)
-                except psutil.TimeoutExpired:
-                    # Force kill if necessary
-                    process.kill()
+            # Clean up session
+            self._cleanup_session(session_id)
 
-            self._cleanup_process(session_id)
             return True
 
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            self._cleanup_process(session_id)
+        except ProcessNotFoundError:
+            # Process already gone
+            self._cleanup_session(session_id)
             return True
         except Exception:
             return False
 
     def _stop_all_processes(self) -> bool:
-        """Stop monitoring all processes."""
+        """Stop monitoring all processes.
+
+        Returns:
+            True if all processes stopped successfully
+        """
         success = True
         session_ids = list(self.monitored_processes.keys())
 
@@ -236,36 +174,26 @@ class ProcessMonitor:
             if not self._stop_single_process(session_id):
                 success = False
 
-        # Stop monitoring thread
-        self.monitoring_active = False
-        self._shutdown_event.set()
-
-        if self.monitoring_thread and self.monitoring_thread.is_alive():
-            self.monitoring_thread.join(timeout=5)
-
         return success
 
-    def _cleanup_process(self, session_id: str) -> None:
-        """Clean up resources for a process."""
-        # Update process status
+    def _cleanup_session(self, session_id: str) -> None:
+        """Clean up all resources for a session.
+
+        Args:
+            session_id: Session to clean up
+        """
+        # Stop output capture
+        self.output_capture.stop_capture(session_id)
+
+        # Unregister from health checker
+        self.health_checker.unregister_process(session_id)
+
+        # Remove from tracked sessions
         if session_id in self.monitored_processes:
-            self.monitored_processes[session_id].status = ProcessState.STOPPED
             del self.monitored_processes[session_id]
 
-        # Clean up output queue
-        if session_id in self.output_queues:
-            del self.output_queues[session_id]
-
-        # Clean up output thread
-        if session_id in self.output_threads:
-            thread = self.output_threads[session_id]
-            if thread.is_alive():
-                thread.join(timeout=1)
-            del self.output_threads[session_id]
-
     def get_recent_output(self, session_id: str, lines: int = 50) -> List[str]:
-        """
-        Get recent output from a monitored process.
+        """Get recent output from a monitored process.
 
         Args:
             session_id: Session identifier
@@ -274,29 +202,21 @@ class ProcessMonitor:
         Returns:
             List of recent output lines
         """
-        if session_id not in self.output_queues:
-            return []
-
-        output_queue = self.output_queues[session_id]
-        recent_lines = []
-
-        # Drain the queue up to the specified number of lines
-        while len(recent_lines) < lines and not output_queue.empty():
-            try:
-                line = output_queue.get_nowait()
-                recent_lines.append(line)
-            except queue.Empty:
-                break
-
-        return recent_lines
+        return self.output_capture.get_recent_output(session_id, lines)
 
     def get_all_output(self, session_id: str) -> List[str]:
-        """Get all captured output for a session."""
-        return self.get_recent_output(session_id, lines=self.output_buffer_size)
+        """Get all captured output for a session.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            List of all output lines
+        """
+        return self.output_capture.get_all_output(session_id)
 
     def get_health_metrics(self, session_id: str) -> Optional[HealthMetrics]:
-        """
-        Get health metrics for a monitored process.
+        """Get health metrics for a monitored process.
 
         Args:
             session_id: Session identifier
@@ -304,60 +224,60 @@ class ProcessMonitor:
         Returns:
             HealthMetrics object or None if process not found
         """
-        if session_id not in self.monitored_processes:
-            return None
-
-        process_info = self.monitored_processes[session_id]
-
-        try:
-            if not psutil.pid_exists(process_info.pid):
-                return None
-
-            process = psutil.Process(process_info.pid)
-
-            # Get CPU and memory usage
-            cpu_percent = process.cpu_percent()
-            memory_info = process.memory_info()
-            memory_mb = memory_info.rss / 1024 / 1024
-
-            # Get additional metrics
-            try:
-                open_files = len(process.open_files())
-            except (psutil.AccessDenied, psutil.NoSuchProcess):
-                open_files = 0
-
-            try:
-                thread_count = process.num_threads()
-            except (psutil.AccessDenied, psutil.NoSuchProcess):
-                thread_count = 0
-
-            uptime = (datetime.now() - process_info.start_time).total_seconds()
-
-            return HealthMetrics(
-                cpu_percent=cpu_percent,
-                memory_usage=memory_info.percent if hasattr(memory_info, 'percent') else 0.0,
-                memory_mb=memory_mb,
-                status=process.status(),
-                open_files=open_files,
-                thread_count=thread_count,
-                uptime_seconds=uptime
-            )
-
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            return None
+        return self.health_checker.get_health_metrics(session_id)
 
     def get_active_processes(self) -> List[ProcessInfo]:
-        """Get list of all actively monitored processes."""
-        with self._lock:
-            return list(self.monitored_processes.values())
+        """Get list of all actively monitored processes.
+
+        Returns:
+            List of ProcessInfo objects
+        """
+        return list(self.monitored_processes.values())
 
     def is_process_monitored(self, pid: int) -> bool:
-        """Check if a process is being monitored."""
-        with self._lock:
-            return any(info.pid == pid for info in self.monitored_processes.values())
+        """Check if a process is being monitored.
+
+        Args:
+            pid: Process ID to check
+
+        Returns:
+            True if process is monitored
+        """
+        return any(info.pid == pid for info in self.monitored_processes.values())
+
+    def inject_output(self, text: str, session_id: Optional[str] = None) -> None:
+        """Inject synthetic output lines for testing.
+
+        Args:
+            text: Text to inject
+            session_id: Target session, or first available if None
+        """
+        self.output_capture.inject_output(text, session_id)
+
+    def simulate_process_death(self, session_id: Optional[str] = None) -> None:
+        """Simulate abrupt process termination for testing.
+
+        Args:
+            session_id: Session to terminate, or first available
+        """
+        target_session_id = session_id or next(iter(self.monitored_processes.keys()), None)
+        if not target_session_id:
+            return
+
+        # Simulate death in launcher
+        self.launcher.simulate_process_death(target_session_id)
+
+        # Update status in health checker
+        if target_session_id in self.monitored_processes:
+            self.monitored_processes[target_session_id].status = ProcessState.CRASHED
 
     def get_monitoring_overhead(self) -> Dict[str, float]:
-        """Get monitoring system overhead metrics."""
+        """Get monitoring system overhead metrics.
+
+        Returns:
+            Dictionary with CPU, memory, and thread metrics
+        """
+        import psutil
         try:
             current_process = psutil.Process()
             return {
@@ -369,93 +289,42 @@ class ProcessMonitor:
         except Exception:
             return {"cpu_percent": 0.0, "memory_mb": 0.0, "thread_count": 0, "open_files": 0}
 
-    def _capture_output(self, process: subprocess.Popen, output_queue: queue.Queue, session_id: str) -> None:
-        """Capture output from a process in a separate thread."""
-        try:
-            while True:
-                line = process.stdout.readline()
-                if not line:
-                    if process.poll() is not None:
-                        break
-                    time.sleep(0.01)
-                    continue
+    def shutdown(self) -> None:
+        """Shutdown all monitoring services and clean up resources."""
+        # Stop all processes
+        self.stop_monitoring()
 
-                line = line.strip()
-                if line:
-                    try:
-                        output_queue.put(line, timeout=0.1)
-                    except queue.Full:
-                        # Remove oldest item to make room
-                        try:
-                            output_queue.get_nowait()
-                            output_queue.put(line, timeout=0.1)
-                        except queue.Empty:
-                            pass
-
-        except Exception:
-            pass  # Thread will exit
-
-    def _start_monitoring_thread(self) -> None:
-        """Start the main monitoring thread."""
-        if self.monitoring_active:
-            return
-
-        self.monitoring_active = True
-        self._shutdown_event.clear()
-        self.monitoring_thread = threading.Thread(target=self._monitoring_loop, daemon=True)
-        self.monitoring_thread.start()
-
-    def _monitoring_loop(self) -> None:
-        """Main monitoring loop that runs in a separate thread."""
-        while self.monitoring_active and not self._shutdown_event.is_set():
-            try:
-                with self._lock:
-                    # Update process status for all monitored processes
-                    for session_id, process_info in list(self.monitored_processes.items()):
-                        self._update_process_status(process_info)
-
-                # Sleep until next check
-                self._shutdown_event.wait(self.check_interval)
-
-            except Exception:
-                pass  # Continue monitoring
-
-    def _update_process_status(self, process_info: ProcessInfo) -> None:
-        """Update the status of a monitored process."""
-        try:
-            if not psutil.pid_exists(process_info.pid):
-                process_info.status = ProcessState.STOPPED
-                return
-
-            process = psutil.Process(process_info.pid)
-            status = process.status()
-
-            if status == psutil.STATUS_RUNNING:
-                process_info.status = ProcessState.RUNNING
-            elif status == psutil.STATUS_SLEEPING:
-                process_info.status = ProcessState.RUNNING  # Still active
-            elif status == psutil.STATUS_ZOMBIE:
-                process_info.status = ProcessState.ZOMBIE
-            elif status == psutil.STATUS_STOPPED:
-                process_info.status = ProcessState.STOPPED
-            else:
-                process_info.status = ProcessState.UNKNOWN
-
-            # Update metrics
-            process_info.cpu_percent = process.cpu_percent()
-            process_info.memory_mb = process.memory_info().rss / 1024 / 1024
-
-            try:
-                process_info.open_files = len(process.open_files())
-            except (psutil.AccessDenied, psutil.NoSuchProcess):
-                process_info.open_files = 0
-
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            process_info.status = ProcessState.CRASHED
+        # Shutdown services
+        self.output_capture.shutdown()
+        self.health_checker.shutdown()
+        self.launcher.cleanup()
 
     def __del__(self):
         """Cleanup when monitor is destroyed."""
         try:
-            self.stop_monitoring()
+            self.shutdown()
         except Exception:
             pass
+
+    def __str__(self) -> str:
+        """String representation."""
+        return (
+            f"ProcessMonitor("
+            f"sessions={len(self.monitored_processes)}, "
+            f"launcher={self.launcher}, "
+            f"output={self.output_capture}, "
+            f"health={self.health_checker}"
+            f")"
+        )
+
+
+# Export original classes for backward compatibility
+__all__ = [
+    'ProcessMonitor',
+    'ProcessInfo',
+    'HealthMetrics',
+    'ProcessState',
+    'ProcessLauncher',
+    'OutputCapture',
+    'HealthChecker'
+]

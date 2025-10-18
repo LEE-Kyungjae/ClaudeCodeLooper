@@ -8,12 +8,10 @@ import sys
 import os
 from typing import Optional
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
-from src.models.system_configuration import SystemConfiguration
-from src.services.config_manager import ConfigManager
-from src.services.restart_controller import RestartController
+# Use relative imports - no sys.path manipulation needed
+from ..models.system_configuration import SystemConfiguration
+from ..services.config_manager import ConfigManager
+from ..services.restart_controller import RestartController
 
 
 # Global context object
@@ -26,6 +24,7 @@ class CLIContext:
         self.controller: Optional[RestartController] = None
         self.verbose = False
         self.quiet = False
+        self.test_mode = False
 
 
 # Create context
@@ -34,7 +33,7 @@ pass_context = click.make_pass_decorator(CLIContext, ensure=True)
 
 @click.group()
 @click.option('--config', '-c',
-              type=click.Path(exists=True),
+              type=click.Path(),
               help='Path to configuration file')
 @click.option('--verbose', '-v',
               is_flag=True,
@@ -78,6 +77,13 @@ def cli(ctx: CLIContext, config: Optional[str], verbose: bool, quiet: bool, vers
 
         # Initialize controller
         ctx.controller = RestartController(ctx.config)
+
+        # Determine test mode
+        env_test_mode = os.getenv("CLAUDE_RESTART_TEST_MODE")
+        ctx.test_mode = bool(ctx.config.is_test_mode_enabled() or (env_test_mode and env_test_mode != "0"))
+
+        if ctx.test_mode and not ctx.config.allows_process_simulation():
+            ctx.config.monitoring["allow_process_simulation"] = True
 
         # Restore previous state if available
         if not ctx.controller.restore_state():

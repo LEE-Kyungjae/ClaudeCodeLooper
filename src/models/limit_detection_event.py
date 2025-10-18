@@ -16,7 +16,7 @@ class LimitDetectionEvent(BaseModel):
     detection_time: datetime = Field(default_factory=datetime.now)
     matched_pattern: str = Field(..., min_length=1)
     matched_text: str = Field(..., min_length=1)
-    session_id: str = Field(..., min_length=1)
+    session_id: Optional[str] = Field(default=None)
 
     # Waiting period information
     cooldown_start: Optional[datetime] = Field(default=None)
@@ -47,6 +47,14 @@ class LimitDetectionEvent(BaseModel):
         if not v or not v.strip():
             raise ValueError("Pattern and text cannot be empty")
         return v.strip()
+
+    @validator('session_id', pre=True, always=True)
+    def validate_session_id(cls, v):
+        """Allow session_id to be assigned lazily."""
+        if v is None:
+            return None
+        v = str(v).strip()
+        return v or None
 
     @validator('cooldown_duration_hours')
     def validate_duration(cls, v):
@@ -109,6 +117,11 @@ class LimitDetectionEvent(BaseModel):
         if remaining is None:
             return 0.0
         return remaining.total_seconds()
+
+    @property
+    def is_limit_hit(self) -> bool:
+        """Heuristic flag indicating whether detection represents a real limit hit."""
+        return self.confidence >= 0.8
 
     def mark_processed(self, action: str) -> None:
         """Mark the event as processed with action taken."""
