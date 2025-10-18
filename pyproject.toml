@@ -3,22 +3,46 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "claude-restart-monitor"
+name = "claude-code-looper"
 version = "1.0.0"
 description = "Automated monitoring and restart system for Claude Code usage limits"
-authors = [{name = "Claude Code User", email = "user@example.com"}]
-license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    {name = "Kyungjae Lee", email = "your-email@example.com"}
+]
+maintainers = [
+    {name = "Kyungjae Lee", email = "your-email@example.com"}
+]
+keywords = [
+    "claude",
+    "claude-code",
+    "automation",
+    "monitoring",
+    "restart",
+    "cli",
+    "ai",
+    "assistant",
+    "development-tools"
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Environment :: Console",
+    "Typing :: Typed",
 ]
+requires-python = ">=3.11"
 dependencies = [
     "psutil>=5.9.0",
     "click>=8.1.0",
@@ -36,10 +60,18 @@ dev = [
     "flake8>=6.0.0",
     "isort>=5.12.0",
     "mypy>=1.5.0",
+    "types-python-dateutil>=2.8.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/LEE-Kyungjae/ClaudeCodeLooper"
+Documentation = "https://github.com/LEE-Kyungjae/ClaudeCodeLooper#readme"
+Repository = "https://github.com/LEE-Kyungjae/ClaudeCodeLooper"
+Issues = "https://github.com/LEE-Kyungjae/ClaudeCodeLooper/issues"
+Changelog = "https://github.com/LEE-Kyungjae/ClaudeCodeLooper/blob/main/CHANGELOG.md"
+
 [project.scripts]
-claude-restart-monitor = "src.cli.main:cli"
+claude-looper = "src.cli.main:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]
