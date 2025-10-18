@@ -206,6 +206,17 @@ class TaskCompletionMonitor(BaseModel):
         """Check if a task is currently in progress."""
         return self.status in [TaskStatus.TASK_DETECTED, TaskStatus.WAITING_COMPLETION]
 
+    def set_task_in_progress(self, active: bool) -> None:
+        """Manually toggle task-in-progress state (testing and overrides)."""
+        if active:
+            self.status = TaskStatus.WAITING_COMPLETION
+            if self.task_start_time is None:
+                self.task_start_time = datetime.now()
+            self.last_activity_time = datetime.now()
+        else:
+            self.status = TaskStatus.COMPLETED
+            self.completion_detected_time = datetime.now()
+
     def is_waiting_for_completion(self) -> bool:
         """Check if waiting for task completion."""
         return self.status == TaskStatus.WAITING_COMPLETION

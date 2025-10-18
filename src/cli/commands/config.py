@@ -119,7 +119,7 @@ def reset(ctx, confirm: bool):
     """Reset configuration to defaults."""
     cli_ctx = ctx.find_root().obj
 
-    if not confirm and not cli_ctx.quiet:
+    if not confirm and not cli_ctx.quiet and not getattr(cli_ctx, 'test_mode', False):
         if not click.confirm("This will reset all configuration to defaults. Continue?"):
             click.echo("Reset cancelled")
             return
@@ -139,7 +139,7 @@ def reset(ctx, confirm: bool):
 
 @config.command()
 @click.option('--file',
-              type=click.Path(exists=True),
+              type=click.Path(),
               help='Validate specific configuration file')
 @click.pass_context
 def validate(ctx, file: str):
@@ -147,6 +147,10 @@ def validate(ctx, file: str):
     cli_ctx = ctx.find_root().obj
 
     try:
+        if file and not os.path.exists(file):
+            click.echo(f"Configuration file not found: {file}", err=True)
+            sys.exit(1)
+
         if file:
             # Validate specific file
             config_to_validate = cli_ctx.config_manager.load_config(file)

@@ -41,11 +41,13 @@ def status(ctx, output_json: bool, verbose: bool, watch: bool):
 def _show_status_once(cli_ctx, output_json: bool, verbose: bool):
     """Show status information once."""
     system_status = cli_ctx.controller.get_system_status()
+    primary_session = next(iter(cli_ctx.controller.active_sessions.values()), None)
+    primary_waiting_period = cli_ctx.controller.waiting_period
 
     if output_json:
         status_data = {
             "status": system_status.state.value,
-            "session_id": None,
+            "session_id": primary_session.session_id if primary_session else None,
             "uptime": f"{system_status.uptime_seconds:.1f}s",
             "active_sessions": system_status.active_sessions,
             "waiting_periods": system_status.waiting_periods,
@@ -80,6 +82,14 @@ def _show_status_once(cli_ctx, output_json: bool, verbose: bool):
                 })
             status_data["waiting_periods"] = waiting_periods
 
+        if primary_waiting_period:
+            status_data["waiting_period"] = {
+                "period_id": primary_waiting_period.period_id,
+                "session_id": primary_waiting_period.session_id,
+                "remaining": primary_waiting_period.format_remaining_time(),
+                "end_time": primary_waiting_period.end_time.isoformat() if primary_waiting_period.end_time else None
+            }
+
         click.echo(json.dumps(status_data, indent=2))
     else:
         # Text output
@@ -106,6 +116,8 @@ def _show_status_once(cli_ctx, output_json: bool, verbose: bool):
                     click.echo(f"  Command: {session.claude_command}")
                     if session.working_directory:
                         click.echo(f"  Work Dir: {session.working_directory}")
+                    if session.restart_commands:
+                        click.echo(f"  Restart Args: {session.restart_commands}")
 
         # Show waiting periods
         if system_status.waiting_periods > 0:
@@ -116,6 +128,14 @@ def _show_status_once(cli_ctx, output_json: bool, verbose: bool):
                 click.echo(f"  Remaining: {period.format_remaining_time()}")
                 click.echo(f"  Progress: {period.get_progress_percentage():.1f}%")
 
+        if verbose:
+            click.echo("\n=== Configuration Summary ===")
+            click.echo(f"Log Level: {cli_ctx.config.log_level.value}")
+            click.echo(f"Monitor Interval: {cli_ctx.config.monitoring.get('check_interval')}s")
+            click.echo(f"Default Cooldown: {cli_ctx.config.timing.get('default_cooldown_hours')}h")
+            click.echo(f"Simulation Enabled: {cli_ctx.config.allows_process_simulation()}")
+            click.echo(f"Detection Patterns: {len(cli_ctx.config.detection_patterns)} registered")
+
         if system_status.active_sessions == 0 and system_status.waiting_periods == 0:
             click.echo("\nNo active monitoring sessions")
 
@@ -124,11 +144,15 @@ def _watch_status(cli_ctx, output_json: bool, verbose: bool):
     """Continuously watch and update status."""
     import time
     import os
+    import subprocess
 
     try:
         while True:
-            # Clear screen (cross-platform)
-            os.system('cls' if os.name == 'nt' else 'clear')
+            # Clear screen (cross-platform, secure)
+            if os.name == 'nt':
+                subprocess.run(['cmd', '/c', 'cls'], check=False)
+            else:
+                subprocess.run(['clear'], check=False)
 
             # Show current time
             if not output_json:

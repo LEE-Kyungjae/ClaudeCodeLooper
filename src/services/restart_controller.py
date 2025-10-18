@@ -117,12 +117,23 @@ class RestartController:
         with self._lock:
             try:
                 # Create monitoring session
-                session = MonitoringSession(
-                    claude_command=claude_cmd,
-                    working_directory=work_dir,
-                    restart_commands=restart_commands or [],
-                    session_id=session_id
-                )
+                session_kwargs = {
+                    "claude_command": claude_cmd,
+                    "working_directory": work_dir,
+                    "restart_commands": restart_commands or []
+                }
+                if session_id:
+                    session_kwargs["session_id"] = session_id
+
+                session = MonitoringSession(**session_kwargs)
+
+                # Create restart configuration snapshot for the session
+                restart_config = RestartCommandConfiguration.create_default(claude_cmd)
+                if restart_commands:
+                    restart_config.arguments.extend(list(restart_commands))
+                session.restart_config = restart_config
+                session.restart_config_id = restart_config.config_id
+                session.restart_commands = restart_config.arguments.copy()
 
                 # Start process monitoring
                 process_info = self.process_monitor.start_monitoring(
@@ -376,9 +387,7 @@ class RestartController:
                 self.process_monitor.stop_monitoring(session.session_id)
 
                 # Build restart command
-                restart_config = RestartCommandConfiguration.create_default(session.claude_command)
-                if session.restart_commands:
-                    restart_config.arguments.extend(session.restart_commands)
+                restart_config = session.restart_config.clone() if session.restart_config else RestartCommandConfiguration.create_default(session.claude_command)
 
                 # Start new process
                 process_info = self.process_monitor.start_monitoring(
@@ -390,6 +399,9 @@ class RestartController:
                 # Update session
                 session.resume_from_waiting()
                 session.claude_process_id = process_info.pid
+                session.restart_config = restart_config
+                session.restart_config_id = restart_config.config_id
+                session.restart_commands = restart_config.arguments.copy()
 
                 # Reset task monitor
                 task_monitor = self.task_monitors.get(session.session_id)
@@ -447,6 +459,22 @@ class RestartController:
                 last_activity=self.last_activity,
                 error_message=None
             )
+
+    @property
+    def waiting_period(self) -> Optional[WaitingPeriod]:
+        """Compatibility accessor returning the first active waiting period."""
+        with self._lock:
+            for period in self.waiting_periods.values():
+                return period
+            return None
+
+    @property
+    def task_monitor(self) -> Optional[TaskCompletionMonitor]:
+        """Compatibility accessor returning the primary task monitor."""
+        with self._lock:
+            for monitor in self.task_monitors.values():
+                return monitor
+            return None
 
     def get_recent_logs(self, lines: int = 50) -> List[str]:
         """Get recent system logs."""

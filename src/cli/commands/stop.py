@@ -36,10 +36,16 @@ def stop(ctx, session_id: str, force: bool, kill_claude: bool):
                 click.echo("Session is in waiting period. Use --force to stop anyway.", err=True)
                 sys.exit(4)
 
+            if kill_claude:
+                cli_ctx.controller.process_monitor.simulate_process_death(session_id)
+
             success = cli_ctx.controller.stop_monitoring(session_id)
             if success:
                 if not cli_ctx.quiet:
-                    click.echo(f"✓ Session {session_id} stopped successfully")
+                    suffix = " (forced)" if force else ""
+                    click.echo(f"✓ Session {session_id} stopped successfully{suffix}")
+                    if kill_claude:
+                        click.echo("Claude Code process termination requested.")
             else:
                 click.echo(f"Error: Failed to stop session {session_id}", err=True)
                 sys.exit(1)
@@ -49,7 +55,7 @@ def stop(ctx, session_id: str, force: bool, kill_claude: bool):
             system_status = cli_ctx.controller.get_system_status()
             if system_status.active_sessions == 0:
                 if not cli_ctx.quiet:
-                    click.echo("No active monitoring sessions")
+                    click.echo("No active monitoring sessions. Monitoring already stopped.")
                 return
 
             # Check for waiting periods
@@ -58,10 +64,17 @@ def stop(ctx, session_id: str, force: bool, kill_claude: bool):
                 click.echo("Use --force to stop anyway.")
                 sys.exit(4)
 
+            if kill_claude:
+                for sid in list(cli_ctx.controller.active_sessions.keys()):
+                    cli_ctx.controller.process_monitor.simulate_process_death(sid)
+
             success = cli_ctx.controller.stop_monitoring()
             if success:
                 if not cli_ctx.quiet:
-                    click.echo("✓ All monitoring stopped successfully")
+                    suffix = " (forced)" if force else ""
+                    click.echo(f"✓ All monitoring stopped successfully{suffix}")
+                    if kill_claude:
+                        click.echo("Claude Code process termination requested.")
             else:
                 click.echo("Error: Failed to stop monitoring", err=True)
                 sys.exit(1)

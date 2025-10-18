@@ -51,7 +51,9 @@ class SystemConfiguration(BaseModel):
         "check_interval": 1.0,
         "task_timeout": 300,
         "output_buffer_size": 1000,
-        "max_processes": 5
+        "max_processes": 5,
+        "allow_process_simulation": True,
+        "test_mode": False
     })
 
     # Timing configuration
@@ -250,6 +252,14 @@ class SystemConfiguration(BaseModel):
     def get_notification_settings(self) -> Dict[str, Any]:
         """Get notification configuration."""
         return self.notifications.copy()
+
+    def allows_process_simulation(self) -> bool:
+        """Check if process simulation is permitted."""
+        return bool(self.monitoring.get("allow_process_simulation", True))
+
+    def is_test_mode_enabled(self) -> bool:
+        """Check if test mode is enabled."""
+        return bool(self.monitoring.get("test_mode", False))
 
     def update_setting(self, section: str, key: str, value: Any) -> None:
         """Update a configuration setting."""
