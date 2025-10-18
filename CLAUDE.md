@@ -10,7 +10,7 @@ Claude Code Automated Restart System - A monitoring and automation tool that det
 **Branch**: `001-5-5-5`
 
 **Key Technologies**:
-- Python 3.11+ (Windows process management)
+- Python 3.9+ (Windows process management)
 - psutil (process monitoring)
 - subprocess (process control and output capture)
 - JSON (configuration and state persistence)

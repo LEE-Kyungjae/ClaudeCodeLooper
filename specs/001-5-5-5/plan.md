@@ -34,7 +34,7 @@
 Claude Code Automated Restart System: An automated monitoring and restart system that continuously watches Claude Code terminal output for 5-hour usage limit notifications, triggers precise countdown timers, and automatically restarts Claude Code with predefined commands after cooldown periods expire. The system operates indefinitely on Windows, ensuring task completion before restart cycles and providing comprehensive logging throughout the process.
 
 ## Technical Context
-**Language/Version**: Python 3.11+ (optimal for Windows system integration, text processing, and process management)
+**Language/Version**: Python 3.9+ (mainline support across platforms while meeting dependency requirements)
 **Primary Dependencies**: psutil (process monitoring), subprocess (process control), time/datetime (precise timing), re (pattern matching), logging (event logging)
 **Storage**: Local file system for configuration, logs, and state persistence
 **Testing**: pytest (unit testing), integration tests for terminal monitoring and process control

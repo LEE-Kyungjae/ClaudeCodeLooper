@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Windows 10/11 or WSL environment
-- Python 3.11 or higher
+- Python 3.9 or higher
 - Claude Code installed and accessible via command line
 - Administrative permissions (for process monitoring)
 
