@@ -12,12 +12,18 @@ echo ""
 
 # Check Python version
 echo "🔍 Checking Python version..."
-PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
+PYTHON_BIN=${PYTHON_BIN:-python3}
+if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+    echo "❌ Error: python3 not found. Install Python 3.9+ and retry."
+    exit 1
+fi
+
+PYTHON_VERSION=$($PYTHON_BIN --version 2>&1 | awk '{print $2}')
 PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
 PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
 
-if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 11 ]; }; then
-    echo "❌ Error: Python 3.11 or higher is required"
+if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 9 ]; }; then
+    echo "❌ Error: Python 3.9 or higher is required"
     echo "   Current version: $PYTHON_VERSION"
     echo "   Please upgrade Python and try again"
     exit 1

@@ -12,9 +12,22 @@ python --version > temp_version.txt 2>&1
 set /p PYTHON_VERSION=<temp_version.txt
 del temp_version.txt
 
-echo %PYTHON_VERSION% | findstr /R "Python 3\.1[1-9]" > nul
-if errorlevel 1 (
-    echo Error: Python 3.11 or higher is required
+for /f "tokens=2 delims= " %%A in ("%PYTHON_VERSION%") do set VERSION_NUMBER=%%A
+for /f "tokens=1,2 delims=." %%A in ("%VERSION_NUMBER%") do (
+    set MAJOR=%%A
+    set MINOR=%%B
+)
+
+if %MAJOR% LSS 3 (
+    echo Error: Python 3.9 or higher is required
+    echo Current version: %PYTHON_VERSION%
+    echo Please upgrade Python and try again
+    pause
+    exit /b 1
+)
+
+if %MAJOR% EQU 3 if %MINOR% LSS 9 (
+    echo Error: Python 3.9 or higher is required
     echo Current version: %PYTHON_VERSION%
     echo Please upgrade Python and try again
     pause

@@ -1,7 +1,7 @@
 """TaskQueueManager service for queued post-restart tasks."""
 from __future__ import annotations
 
-from typing import List, Iterable
+from typing import List, Iterable, Optional
 from datetime import datetime
 
 from ..models.queued_task import QueuedTask
@@ -10,8 +10,8 @@ from ..models.queued_task import QueuedTask
 class TaskQueueManager:
     """In-memory manager for queued tasks."""
 
-    def __init__(self, tasks: Iterable[QueuedTask] | None = None):
-        self._tasks: List[QueuedTask] = list(tasks) if tasks else []
+    def __init__(self, tasks: Optional[Iterable[QueuedTask]] = None):
+        self._tasks: List[QueuedTask] = list(tasks) if tasks is not None else []
 
     def __len__(self) -> int:
         return len(self._tasks)
@@ -70,7 +70,7 @@ class TaskQueueManager:
         """Load tasks from serialized representation."""
         self._tasks = [QueuedTask.from_dict(item) for item in data]
 
-    def next_scheduled_time(self) -> datetime | None:
+    def next_scheduled_time(self) -> Optional[datetime]:
         """Return earliest creation timestamp, if any."""
         if not self._tasks:
             return None
