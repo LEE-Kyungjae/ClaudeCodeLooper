@@ -16,12 +16,14 @@ from ..models.limit_detection_event import LimitDetectionEvent
 from ..models.waiting_period import WaitingPeriod, PeriodStatus
 from ..models.restart_command_config import RestartCommandConfiguration
 from ..models.task_completion_monitor import TaskCompletionMonitor, TaskStatus
+from ..models.queued_task import QueuedTask
 
 from .process_monitor import ProcessMonitor
 from .pattern_detector import PatternDetector
 from .timing_manager import TimingManager
 from .state_manager import StateManager
 from .config_manager import ConfigManager
+from .task_queue import TaskQueueManager
 
 
 class ControllerState(Enum):
@@ -62,6 +64,7 @@ class RestartController:
         self.timing_manager = TimingManager(config)
         self.state_manager = StateManager(config)
         self.config_manager = ConfigManager()
+        self.task_queue = TaskQueueManager()
 
         # Data storage
         self.active_sessions: Dict[str, MonitoringSession] = {}
@@ -169,6 +172,34 @@ class RestartController:
                 self.state = ControllerState.ERROR
                 self._trigger_event("error_occurred", {"error": str(e), "context": "start_monitoring"})
                 raise RuntimeError(f"Failed to start monitoring: {e}")
+
+    def add_task_to_queue(self, description: str) -> QueuedTask:
+        """Schedule a task to run after the next restart."""
+        with self._lock:
+            task = self.task_queue.add_task(description)
+            self._save_current_state()
+            return task
+
+    def list_queued_tasks(self) -> List[QueuedTask]:
+        """Return the current queued tasks in priority order."""
+        with self._lock:
+            return self.task_queue.list_tasks()
+
+    def remove_queued_tasks(self, indices: List[int]) -> List[QueuedTask]:
+        """Remove queued tasks by their displayed indices."""
+        with self._lock:
+            removed = self.task_queue.remove_indices(indices)
+            if removed:
+                self._save_current_state()
+            return removed
+
+    def clear_task_queue(self) -> int:
+        """Clear all queued tasks."""
+        with self._lock:
+            removed_count = self.task_queue.clear()
+            if removed_count:
+                self._save_current_state()
+            return removed_count
 
     def stop_monitoring(self, session_id: Optional[str] = None) -> bool:
         """
@@ -412,6 +443,9 @@ class RestartController:
                 self.restart_count += 1
                 self.last_activity = datetime.now()
 
+                # Execute queued tasks if any are pending
+                self._execute_task_queue(session)
+
                 # Save state
                 self._save_current_state()
 
@@ -426,6 +460,33 @@ class RestartController:
                     "context": "restart",
                     "session_id": session.session_id
                 })
+
+    def _execute_task_queue(self, session: MonitoringSession) -> None:
+        """Dispatch queued tasks to the restarted session."""
+        queued_tasks = self.task_queue.pop_all()
+        if not queued_tasks:
+            return
+
+        failed_index: Optional[int] = None
+
+        for index, task in enumerate(queued_tasks):
+            success = self.process_monitor.send_input(session.session_id, task.description)
+            if success:
+                # Small delay to avoid overwhelming the CLI process
+                time.sleep(0.2)
+            else:
+                failed_index = index
+                break
+
+        if failed_index is not None:
+            # Requeue tasks that were not sent successfully (including the failed one)
+            remaining = queued_tasks[failed_index:]
+            self.task_queue.prepend(remaining)
+            self._trigger_event("error_occurred", {
+                "error": "Failed to dispatch queued tasks to Claude Code",
+                "context": "task_queue_dispatch",
+                "session_id": session.session_id
+            })
 
     def _check_task_completions(self) -> None:
         """Check task completion monitors."""
@@ -539,7 +600,8 @@ class RestartController:
                     "restart_count": self.restart_count,
                     "error_count": self.error_count,
                     "state": self.state.value
-                }
+                },
+                "task_queue": self.task_queue.to_serializable()
             }
 
             self.state_manager.save_state(state_data)
@@ -572,6 +634,11 @@ class RestartController:
             for event_data in state_data.get("detection_events", []):
                 event = LimitDetectionEvent.from_dict(event_data)
                 self.detection_events.append(event)
+
+            # Restore queued tasks
+            task_queue_data = state_data.get("task_queue", [])
+            if task_queue_data:
+                self.task_queue.load_serialized(task_queue_data)
 
             # Restore statistics
             stats = state_data.get("statistics", {})

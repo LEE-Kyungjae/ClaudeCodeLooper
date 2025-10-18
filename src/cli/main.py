@@ -105,6 +105,7 @@ from .commands.stop import stop
 from .commands.status import status
 from .commands.config import config as config_cmd
 from .commands.logs import logs
+from .commands.queue import queue as queue_cmd
 
 # Add commands to main group
 cli.add_command(start)
@@ -112,6 +113,7 @@ cli.add_command(stop)
 cli.add_command(status)
 cli.add_command(config_cmd, name='config')
 cli.add_command(logs)
+cli.add_command(queue_cmd, name='queue')
 
 
 @cli.command()
