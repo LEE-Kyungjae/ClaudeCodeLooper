@@ -1,0 +1,31 @@
+# Include documentation
+include README.md
+include LICENSE
+include IMPROVEMENTS.md
+include REFACTORING_COMPLETE.md
+
+# Include configuration files
+include requirements.txt
+include requirements-dev.txt
+recursive-include config *.json
+
+# Include Claude Code slash commands
+recursive-include .claude/commands *.md
+
+# Include installation scripts
+include install.sh
+include install.bat
+
+# Exclude tests and development files
+exclude .gitignore
+exclude .git
+recursive-exclude tests *
+recursive-exclude docs *
+recursive-exclude .github *
+
+# Exclude Python bytecode and caches
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *$py.class
+global-exclude *.so
+global-exclude .DS_Store
