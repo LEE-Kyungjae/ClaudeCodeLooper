@@ -3,6 +3,7 @@
 Handles starting, stopping, and managing Claude Code processes with
 safe command parsing and proper resource cleanup.
 """
+
 import os
 import time
 import psutil
@@ -17,7 +18,7 @@ from ..exceptions import (
     ProcessStartError,
     ProcessStopError,
     ProcessNotFoundError,
-    with_context
+    with_context,
 )
 from ..utils.logging import get_logger
 
@@ -25,6 +26,7 @@ from ..utils.logging import get_logger
 @dataclass
 class LaunchResult:
     """Result of launching a process."""
+
     pid: int
     session_id: str
     command: str
@@ -53,7 +55,7 @@ class ProcessLauncher:
         command: str,
         session_id: str,
         work_dir: Optional[str] = None,
-        env_vars: Optional[Dict[str, str]] = None
+        env_vars: Optional[Dict[str, str]] = None,
     ) -> LaunchResult:
         """Launch a new process.
 
@@ -106,7 +108,7 @@ class ProcessLauncher:
                 bufsize=1,
                 cwd=work_dir,
                 env=env,
-                shell=False  # Always False for security - no shell injection
+                shell=False,  # Always False for security - no shell injection
             )
 
             # Store process handle
@@ -117,7 +119,7 @@ class ProcessLauncher:
             if process.poll() is not None:
                 raise ProcessStartError(
                     f"Process exited immediately after start",
-                    details={"command": command, "exit_code": process.returncode}
+                    details={"command": command, "exit_code": process.returncode},
                 )
 
             return LaunchResult(
@@ -125,7 +127,7 @@ class ProcessLauncher:
                 session_id=session_id,
                 command=command,
                 start_time=datetime.now(),
-                process_handle=process
+                process_handle=process,
             )
 
         except FileNotFoundError as e:
@@ -135,13 +137,13 @@ class ProcessLauncher:
 
             raise ProcessStartError(
                 f"Command not found: {command}",
-                details={"command": command, "original_error": str(e)}
+                details={"command": command, "original_error": str(e)},
             ) from e
 
         except subprocess.SubprocessError as e:
             raise ProcessStartError(
                 f"Failed to start process: {e}",
-                details={"command": command, "session_id": session_id}
+                details={"command": command, "session_id": session_id},
             ) from e
 
         except Exception as e:
@@ -151,14 +153,11 @@ class ProcessLauncher:
 
             raise ProcessStartError(
                 f"Unexpected error starting process",
-                details={"command": command, "session_id": session_id, "error": str(e)}
+                details={"command": command, "session_id": session_id, "error": str(e)},
             ) from e
 
     def stop_process(
-        self,
-        session_id: str,
-        force: bool = False,
-        timeout: float = 5.0
+        self, session_id: str, force: bool = False, timeout: float = 5.0
     ) -> bool:
         """Stop a running process.
 
@@ -173,10 +172,13 @@ class ProcessLauncher:
         Raises:
             ProcessNotFoundError: If session is not found
         """
-        if session_id not in self._process_handles and session_id not in self._simulated_sessions:
+        if (
+            session_id not in self._process_handles
+            and session_id not in self._simulated_sessions
+        ):
             raise ProcessNotFoundError(
                 f"Process session not found: {session_id}",
-                details={"session_id": session_id}
+                details={"session_id": session_id},
             )
 
         # Handle simulated processes
@@ -219,7 +221,7 @@ class ProcessLauncher:
         except Exception as e:
             raise ProcessStopError(
                 f"Failed to stop process",
-                details={"session_id": session_id, "error": str(e)}
+                details={"session_id": session_id, "error": str(e)},
             ) from e
 
     def is_running(self, session_id: str) -> bool:
@@ -289,7 +291,7 @@ class ProcessLauncher:
             session_id=session_id,
             command=f"[SIMULATED] {command}",
             start_time=datetime.now(),
-            process_handle=None  # type: ignore
+            process_handle=None,  # type: ignore
         )
 
     def _generate_fake_pid(self) -> int:

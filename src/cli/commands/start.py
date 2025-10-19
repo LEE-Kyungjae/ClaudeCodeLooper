@@ -3,6 +3,7 @@
 Implements the 'start' command that begins monitoring a Claude Code process
 with automatic restart capabilities.
 """
+
 import click
 import sys
 import os
@@ -10,27 +11,38 @@ from typing import List, Optional
 
 
 @click.command()
-@click.option('--claude-cmd',
-              required=True,
-              help='Command to start Claude Code (required)')
-@click.option('--work-dir',
-              type=click.Path(file_okay=False, dir_okay=True),
-              help='Working directory for Claude Code')
-@click.option('--restart-args',
-              multiple=True,
-              help='Additional arguments for restart (can be specified multiple times)')
-@click.option('--config-file', '--config',
-              'config_file',
-              type=click.Path(),
-              help='Path to configuration file')
-@click.option('--daemon',
-              is_flag=True,
-              help='Run as background daemon')
-@click.option('--session-id',
-              help='Custom session identifier')
+@click.option(
+    "--claude-cmd", required=True, help="Command to start Claude Code (required)"
+)
+@click.option(
+    "--work-dir",
+    type=click.Path(file_okay=False, dir_okay=True),
+    help="Working directory for Claude Code",
+)
+@click.option(
+    "--restart-args",
+    multiple=True,
+    help="Additional arguments for restart (can be specified multiple times)",
+)
+@click.option(
+    "--config-file",
+    "--config",
+    "config_file",
+    type=click.Path(),
+    help="Path to configuration file",
+)
+@click.option("--daemon", is_flag=True, help="Run as background daemon")
+@click.option("--session-id", help="Custom session identifier")
 @click.pass_context
-def start(ctx, claude_cmd: str, work_dir: Optional[str], restart_args: tuple,
-          config_file: Optional[str], daemon: bool, session_id: Optional[str]):
+def start(
+    ctx,
+    claude_cmd: str,
+    work_dir: Optional[str],
+    restart_args: tuple,
+    config_file: Optional[str],
+    daemon: bool,
+    session_id: Optional[str],
+):
     """Start monitoring Claude Code process with automatic restart capability.
 
     This command starts monitoring a Claude Code process and automatically
@@ -58,28 +70,41 @@ def start(ctx, claude_cmd: str, work_dir: Optional[str], restart_args: tuple,
         claude_executable = claude_cmd.split()[0]
         command_exists = _command_exists(claude_executable)
         if not command_exists:
-            simulation_allowed = cli_ctx.config and cli_ctx.config.allows_process_simulation()
+            simulation_allowed = (
+                cli_ctx.config and cli_ctx.config.allows_process_simulation()
+            )
             simulation_whitelist = {"claude", "claude-cli"}
             if simulation_allowed and claude_executable.lower() in simulation_whitelist:
                 if not cli_ctx.quiet:
                     click.echo(
-                        f"Warning: Command '{claude_executable}' not found. Starting in simulation mode.")
+                        f"Warning: Command '{claude_executable}' not found. Starting in simulation mode."
+                    )
             else:
-                click.echo(f"Error: Claude Code command not found: {claude_executable}", err=True)
-                click.echo("Make sure Claude Code is installed and accessible in PATH", err=True)
+                click.echo(
+                    f"Error: Claude Code command not found: {claude_executable}",
+                    err=True,
+                )
+                click.echo(
+                    "Make sure Claude Code is installed and accessible in PATH",
+                    err=True,
+                )
                 sys.exit(2)
 
         # Validate working directory
         if work_dir:
             work_dir = os.path.abspath(work_dir)
             if not os.path.exists(work_dir):
-                if getattr(cli_ctx, 'test_mode', False):
+                if getattr(cli_ctx, "test_mode", False):
                     work_dir = None
                 else:
-                    click.echo(f"Error: Working directory does not exist: {work_dir}", err=True)
+                    click.echo(
+                        f"Error: Working directory does not exist: {work_dir}", err=True
+                    )
                     sys.exit(1)
             elif not os.access(work_dir, os.R_OK | os.X_OK):
-                click.echo(f"Error: No access to working directory: {work_dir}", err=True)
+                click.echo(
+                    f"Error: No access to working directory: {work_dir}", err=True
+                )
                 sys.exit(3)
 
         # Load custom config if specified
@@ -102,7 +127,7 @@ def start(ctx, claude_cmd: str, work_dir: Optional[str], restart_args: tuple,
                 claude_cmd=claude_cmd,
                 work_dir=work_dir,
                 restart_commands=restart_commands,
-                session_id=session_id
+                session_id=session_id,
             )
 
             if not cli_ctx.quiet:
@@ -120,17 +145,22 @@ def start(ctx, claude_cmd: str, work_dir: Optional[str], restart_args: tuple,
 
             if daemon:
                 if not cli_ctx.quiet:
-                    click.echo("Daemon mode enabled. Monitoring continues in background.")
+                    click.echo(
+                        "Daemon mode enabled. Monitoring continues in background."
+                    )
                     click.echo("Use 'claude-restart-monitor stop' to stop monitoring")
                     click.echo("Use 'claude-restart-monitor status' to check status")
             else:
                 if not cli_ctx.quiet:
-                    click.echo("Monitoring active. Use 'claude-restart-monitor status' for updates.")
+                    click.echo(
+                        "Monitoring active. Use 'claude-restart-monitor status' for updates."
+                    )
 
         except Exception as e:
             click.echo(f"Error starting monitoring: {e}", err=True)
             if cli_ctx.verbose:
                 import traceback
+
                 click.echo(traceback.format_exc(), err=True)
             sys.exit(1)
 
@@ -148,4 +178,5 @@ def start(ctx, claude_cmd: str, work_dir: Optional[str], restart_args: tuple,
 def _command_exists(command: str) -> bool:
     """Check if a command exists in PATH."""
     import shutil
+
     return shutil.which(command) is not None

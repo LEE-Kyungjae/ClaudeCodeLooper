@@ -3,6 +3,7 @@
 Provides command-line interface using Click framework with support for
 all monitoring, configuration, and management operations.
 """
+
 import click
 import sys
 import os
@@ -34,20 +35,14 @@ pass_context = click.make_pass_decorator(CLIContext, ensure=True)
 
 
 @click.group()
-@click.option('--config', '-c',
-              type=click.Path(),
-              help='Path to configuration file')
-@click.option('--verbose', '-v',
-              is_flag=True,
-              help='Enable verbose output')
-@click.option('--quiet', '-q',
-              is_flag=True,
-              help='Suppress non-essential output')
-@click.option('--version',
-              is_flag=True,
-              help='Show version information')
+@click.option("--config", "-c", type=click.Path(), help="Path to configuration file")
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
+@click.option("--quiet", "-q", is_flag=True, help="Suppress non-essential output")
+@click.option("--version", is_flag=True, help="Show version information")
 @pass_context
-def cli(ctx: CLIContext, config: Optional[str], verbose: bool, quiet: bool, version: bool):
+def cli(
+    ctx: CLIContext, config: Optional[str], verbose: bool, quiet: bool, version: bool
+):
     """Claude Code Automated Restart Monitor.
 
     Automatically detects Claude Code usage limits and restarts after cooldown periods.
@@ -103,6 +98,7 @@ def cli(ctx: CLIContext, config: Optional[str], verbose: bool, quiet: bool, vers
             click.echo(f"Error initializing: {e}", err=True)
         if verbose:
             import traceback
+
             click.echo(traceback.format_exc(), err=True)
         sys.exit(1)
 
@@ -119,24 +115,28 @@ from .commands.queue import queue as queue_cmd
 cli.add_command(start)
 cli.add_command(stop)
 cli.add_command(status)
-cli.add_command(config_cmd, name='config')
+cli.add_command(config_cmd, name="config")
 cli.add_command(logs)
-cli.add_command(queue_cmd, name='queue')
+cli.add_command(queue_cmd, name="queue")
 
 
 @cli.command()
-@click.option('--format', 'output_format',
-              type=click.Choice(['text', 'json']),
-              default='text',
-              help='Output format')
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format",
+)
 @pass_context
 def info(ctx: CLIContext, output_format: str):
     """Show system information and diagnostics."""
     try:
         system_status = ctx.controller.get_system_status()
 
-        if output_format == 'json':
+        if output_format == "json":
             import json
+
             info_data = {
                 "version": "1.0.0",
                 "system_status": {
@@ -144,14 +144,14 @@ def info(ctx: CLIContext, output_format: str):
                     "active_sessions": system_status.active_sessions,
                     "waiting_periods": system_status.waiting_periods,
                     "total_detections": system_status.total_detections,
-                    "uptime_seconds": system_status.uptime_seconds
+                    "uptime_seconds": system_status.uptime_seconds,
                 },
                 "configuration": {
                     "log_level": ctx.config.log_level.value,
                     "pattern_count": len(ctx.config.detection_patterns),
                     "monitoring_interval": ctx.config.monitoring.get("check_interval"),
-                    "cooldown_hours": ctx.config.timing.get("default_cooldown_hours")
-                }
+                    "cooldown_hours": ctx.config.timing.get("default_cooldown_hours"),
+                },
             }
             click.echo(json.dumps(info_data, indent=2))
         else:
@@ -166,8 +166,12 @@ def info(ctx: CLIContext, output_format: str):
             click.echo("Configuration:")
             click.echo(f"  Log Level: {ctx.config.log_level.value}")
             click.echo(f"  Detection Patterns: {len(ctx.config.detection_patterns)}")
-            click.echo(f"  Monitor Interval: {ctx.config.monitoring.get('check_interval')}s")
-            click.echo(f"  Cooldown Hours: {ctx.config.timing.get('default_cooldown_hours')}")
+            click.echo(
+                f"  Monitor Interval: {ctx.config.monitoring.get('check_interval')}s"
+            )
+            click.echo(
+                f"  Cooldown Hours: {ctx.config.timing.get('default_cooldown_hours')}"
+            )
 
     except Exception as e:
         if not ctx.quiet:
@@ -189,7 +193,7 @@ def test(ctx: CLIContext):
         test_patterns = [
             "Usage limit exceeded - please wait 5 hours",
             "Rate limit reached",
-            "Your 5-hour limit has been reached"
+            "Your 5-hour limit has been reached",
         ]
 
         detection_count = 0
@@ -198,7 +202,9 @@ def test(ctx: CLIContext):
             if detection:
                 detection_count += 1
 
-        click.echo(f"✓ Pattern detection ({detection_count}/{len(test_patterns)} patterns detected)")
+        click.echo(
+            f"✓ Pattern detection ({detection_count}/{len(test_patterns)} patterns detected)"
+        )
 
         # Test timing
         timing_stats = ctx.controller.timing_manager.get_timing_statistics()
@@ -231,5 +237,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

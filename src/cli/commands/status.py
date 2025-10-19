@@ -1,19 +1,14 @@
 """Status command for monitoring information."""
+
 import click
 import json
 from datetime import datetime
 
 
 @click.command()
-@click.option('--json', 'output_json',
-              is_flag=True,
-              help='Output in JSON format')
-@click.option('--verbose',
-              is_flag=True,
-              help='Include detailed information')
-@click.option('--watch',
-              is_flag=True,
-              help='Continuously update status')
+@click.option("--json", "output_json", is_flag=True, help="Output in JSON format")
+@click.option("--verbose", is_flag=True, help="Include detailed information")
+@click.option("--watch", is_flag=True, help="Continuously update status")
 @click.pass_context
 def status(ctx, output_json: bool, verbose: bool, watch: bool):
     """Display current monitoring status and statistics.
@@ -52,34 +47,42 @@ def _show_status_once(cli_ctx, output_json: bool, verbose: bool):
             "active_sessions": system_status.active_sessions,
             "waiting_periods": system_status.waiting_periods,
             "total_detections": system_status.total_detections,
-            "last_activity": system_status.last_activity.isoformat() if system_status.last_activity else None
+            "last_activity": (
+                system_status.last_activity.isoformat()
+                if system_status.last_activity
+                else None
+            ),
         }
 
         # Add session details if available
         if system_status.active_sessions > 0:
             sessions = []
             for session in cli_ctx.controller.active_sessions.values():
-                sessions.append({
-                    "session_id": session.session_id,
-                    "status": session.status.value,
-                    "claude_process_id": session.claude_process_id,
-                    "detection_count": session.detection_count,
-                    "uptime_seconds": session.get_uptime_seconds(),
-                    "command": session.claude_command
-                })
+                sessions.append(
+                    {
+                        "session_id": session.session_id,
+                        "status": session.status.value,
+                        "claude_process_id": session.claude_process_id,
+                        "detection_count": session.detection_count,
+                        "uptime_seconds": session.get_uptime_seconds(),
+                        "command": session.claude_command,
+                    }
+                )
             status_data["sessions"] = sessions
 
         # Add waiting period details
         if system_status.waiting_periods > 0:
             waiting_periods = []
             for period in cli_ctx.controller.waiting_periods.values():
-                waiting_periods.append({
-                    "period_id": period.period_id,
-                    "session_id": period.session_id,
-                    "remaining_seconds": period.get_remaining_seconds(),
-                    "progress": period.get_progress(),
-                    "formatted_remaining": period.format_remaining_time()
-                })
+                waiting_periods.append(
+                    {
+                        "period_id": period.period_id,
+                        "session_id": period.session_id,
+                        "remaining_seconds": period.get_remaining_seconds(),
+                        "progress": period.get_progress(),
+                        "formatted_remaining": period.format_remaining_time(),
+                    }
+                )
             status_data["waiting_periods"] = waiting_periods
 
         if primary_waiting_period:
@@ -87,7 +90,11 @@ def _show_status_once(cli_ctx, output_json: bool, verbose: bool):
                 "period_id": primary_waiting_period.period_id,
                 "session_id": primary_waiting_period.session_id,
                 "remaining": primary_waiting_period.format_remaining_time(),
-                "end_time": primary_waiting_period.end_time.isoformat() if primary_waiting_period.end_time else None
+                "end_time": (
+                    primary_waiting_period.end_time.isoformat()
+                    if primary_waiting_period.end_time
+                    else None
+                ),
             }
 
         click.echo(json.dumps(status_data, indent=2))
@@ -101,7 +108,9 @@ def _show_status_once(cli_ctx, output_json: bool, verbose: bool):
         click.echo(f"System Uptime: {system_status.uptime_seconds:.1f} seconds")
 
         if system_status.last_activity:
-            click.echo(f"Last Activity: {system_status.last_activity.strftime('%Y-%m-%d %H:%M:%S')}")
+            click.echo(
+                f"Last Activity: {system_status.last_activity.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
 
         # Show session details
         if system_status.active_sessions > 0:
@@ -131,10 +140,18 @@ def _show_status_once(cli_ctx, output_json: bool, verbose: bool):
         if verbose:
             click.echo("\n=== Configuration Summary ===")
             click.echo(f"Log Level: {cli_ctx.config.log_level.value}")
-            click.echo(f"Monitor Interval: {cli_ctx.config.monitoring.get('check_interval')}s")
-            click.echo(f"Default Cooldown: {cli_ctx.config.timing.get('default_cooldown_hours')}h")
-            click.echo(f"Simulation Enabled: {cli_ctx.config.allows_process_simulation()}")
-            click.echo(f"Detection Patterns: {len(cli_ctx.config.detection_patterns)} registered")
+            click.echo(
+                f"Monitor Interval: {cli_ctx.config.monitoring.get('check_interval')}s"
+            )
+            click.echo(
+                f"Default Cooldown: {cli_ctx.config.timing.get('default_cooldown_hours')}h"
+            )
+            click.echo(
+                f"Simulation Enabled: {cli_ctx.config.allows_process_simulation()}"
+            )
+            click.echo(
+                f"Detection Patterns: {len(cli_ctx.config.detection_patterns)} registered"
+            )
 
         if system_status.active_sessions == 0 and system_status.waiting_periods == 0:
             click.echo("\nNo active monitoring sessions")
@@ -149,14 +166,16 @@ def _watch_status(cli_ctx, output_json: bool, verbose: bool):
     try:
         while True:
             # Clear screen (cross-platform, secure)
-            if os.name == 'nt':
-                subprocess.run(['cmd', '/c', 'cls'], check=False)
+            if os.name == "nt":
+                subprocess.run(["cmd", "/c", "cls"], check=False)
             else:
-                subprocess.run(['clear'], check=False)
+                subprocess.run(["clear"], check=False)
 
             # Show current time
             if not output_json:
-                click.echo(f"Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                click.echo(
+                    f"Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                )
                 click.echo("=" * 50)
 
             _show_status_once(cli_ctx, output_json, verbose)

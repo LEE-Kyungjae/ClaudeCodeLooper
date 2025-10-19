@@ -3,6 +3,7 @@
 Represents the mechanism for ensuring Claude Code tasks finish before
 restart cycles begin, preventing token waste and incomplete operations.
 """
+
 import uuid
 import re
 from datetime import datetime, timedelta
@@ -13,6 +14,7 @@ from enum import Enum
 
 class TaskStatus(str, Enum):
     """Possible states of task monitoring."""
+
     IDLE = "idle"
     MONITORING = "monitoring"
     TASK_DETECTED = "task_detected"
@@ -30,27 +32,31 @@ class TaskCompletionMonitor(BaseModel):
     status: TaskStatus = Field(default=TaskStatus.IDLE)
 
     # Pattern configuration
-    task_start_patterns: List[str] = Field(default_factory=lambda: [
-        r"generating.*response",
-        r"processing.*request",
-        r"analyzing.*code",
-        r"working.*on",
-        r"thinking.*about",
-        r"creating.*file",
-        r"implementing.*",
-        r"writing.*code"
-    ])
+    task_start_patterns: List[str] = Field(
+        default_factory=lambda: [
+            r"generating.*response",
+            r"processing.*request",
+            r"analyzing.*code",
+            r"working.*on",
+            r"thinking.*about",
+            r"creating.*file",
+            r"implementing.*",
+            r"writing.*code",
+        ]
+    )
 
-    task_completion_patterns: List[str] = Field(default_factory=lambda: [
-        r"completed.*successfully",
-        r"finished.*task",
-        r"done.*processing",
-        r"ready.*for.*next",
-        r"task.*complete",
-        r"✓.*complete",
-        r"generation.*finished",
-        r"operation.*successful"
-    ])
+    task_completion_patterns: List[str] = Field(
+        default_factory=lambda: [
+            r"completed.*successfully",
+            r"finished.*task",
+            r"done.*processing",
+            r"ready.*for.*next",
+            r"task.*complete",
+            r"✓.*complete",
+            r"generation.*finished",
+            r"operation.*successful",
+        ]
+    )
 
     # Timing configuration
     timeout_seconds: int = Field(default=300, ge=60, le=3600)  # 5 minutes default
@@ -74,12 +80,11 @@ class TaskCompletionMonitor(BaseModel):
 
     class Config:
         """Pydantic configuration."""
-        use_enum_values = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
-    @validator('task_start_patterns', 'task_completion_patterns')
+        use_enum_values = True
+        json_encoders = {datetime: lambda v: v.isoformat()}
+
+    @validator("task_start_patterns", "task_completion_patterns")
     def validate_patterns(cls, v):
         """Validate regex patterns are compilable."""
         if not v:
@@ -95,14 +100,14 @@ class TaskCompletionMonitor(BaseModel):
 
         return compiled_patterns
 
-    @validator('timeout_seconds')
+    @validator("timeout_seconds")
     def validate_timeout(cls, v):
         """Validate timeout is reasonable."""
         if not 60 <= v <= 3600:  # 1 minute to 1 hour
             raise ValueError("Timeout must be between 60 and 3600 seconds")
         return v
 
-    @validator('check_interval')
+    @validator("check_interval")
     def validate_check_interval(cls, v):
         """Validate check interval is reasonable."""
         if not 0.1 <= v <= 60.0:
@@ -174,9 +179,15 @@ class TaskCompletionMonitor(BaseModel):
     def _is_system_message(self, line: str) -> bool:
         """Check if line is a system message to ignore."""
         system_indicators = [
-            "[DEBUG]", "[INFO]", "[WARN]", "[ERROR]",
-            "claude-code:", "system:", "debug:",
-            "timestamp:", "process id:"
+            "[DEBUG]",
+            "[INFO]",
+            "[WARN]",
+            "[ERROR]",
+            "claude-code:",
+            "system:",
+            "debug:",
+            "timestamp:",
+            "process id:",
         ]
 
         line_lower = line.lower().strip()
@@ -195,8 +206,16 @@ class TaskCompletionMonitor(BaseModel):
     def _is_task_related(self, line: str) -> bool:
         """Check if line seems related to ongoing task."""
         task_keywords = [
-            "file", "code", "function", "class", "implementation",
-            "writing", "creating", "generating", "analyzing", "processing"
+            "file",
+            "code",
+            "function",
+            "class",
+            "implementation",
+            "writing",
+            "creating",
+            "generating",
+            "analyzing",
+            "processing",
         ]
 
         line_lower = line.lower()
@@ -265,7 +284,10 @@ class TaskCompletionMonitor(BaseModel):
 
         # Check if task seems abandoned (no activity for grace period)
         time_since_activity = self.get_time_since_last_activity()
-        if time_since_activity and time_since_activity.total_seconds() > self.grace_period_seconds:
+        if (
+            time_since_activity
+            and time_since_activity.total_seconds() > self.grace_period_seconds
+        ):
             if not self.require_explicit_completion:
                 self.status = TaskStatus.COMPLETED
                 return False
@@ -297,8 +319,14 @@ class TaskCompletionMonitor(BaseModel):
             "task_related_lines": len(self.task_related_output),
             "has_timed_out": self.has_timed_out(),
             "should_wait": self.should_wait_for_completion(),
-            "start_time": self.task_start_time.isoformat() if self.task_start_time else None,
-            "completion_time": self.completion_detected_time.isoformat() if self.completion_detected_time else None
+            "start_time": (
+                self.task_start_time.isoformat() if self.task_start_time else None
+            ),
+            "completion_time": (
+                self.completion_detected_time.isoformat()
+                if self.completion_detected_time
+                else None
+            ),
         }
 
     def add_custom_pattern(self, pattern_type: str, pattern: str) -> None:
@@ -326,23 +354,38 @@ class TaskCompletionMonitor(BaseModel):
             "timeout_seconds": self.timeout_seconds,
             "check_interval": self.check_interval,
             "grace_period_seconds": self.grace_period_seconds,
-            "task_start_time": self.task_start_time.isoformat() if self.task_start_time else None,
-            "last_activity_time": self.last_activity_time.isoformat() if self.last_activity_time else None,
-            "last_check_time": self.last_check_time.isoformat() if self.last_check_time else None,
-            "completion_detected_time": self.completion_detected_time.isoformat() if self.completion_detected_time else None,
+            "task_start_time": (
+                self.task_start_time.isoformat() if self.task_start_time else None
+            ),
+            "last_activity_time": (
+                self.last_activity_time.isoformat() if self.last_activity_time else None
+            ),
+            "last_check_time": (
+                self.last_check_time.isoformat() if self.last_check_time else None
+            ),
+            "completion_detected_time": (
+                self.completion_detected_time.isoformat()
+                if self.completion_detected_time
+                else None
+            ),
             "monitored_output_lines": self.monitored_output_lines,
             "task_related_output": self.task_related_output,
             "confidence_threshold": self.confidence_threshold,
             "require_explicit_completion": self.require_explicit_completion,
             "ignore_system_messages": self.ignore_system_messages,
-            "task_summary": self.get_task_summary()
+            "task_summary": self.get_task_summary(),
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TaskCompletionMonitor":
         """Create instance from dictionary."""
         # Convert datetime strings back to datetime objects
-        datetime_fields = ["task_start_time", "last_activity_time", "last_check_time", "completion_detected_time"]
+        datetime_fields = [
+            "task_start_time",
+            "last_activity_time",
+            "last_check_time",
+            "completion_detected_time",
+        ]
         for field in datetime_fields:
             if isinstance(data.get(field), str):
                 data[field] = datetime.fromisoformat(data[field])

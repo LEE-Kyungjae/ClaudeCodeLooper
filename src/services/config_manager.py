@@ -3,6 +3,7 @@
 Handles loading, saving, validation, and migration of system configuration
 with support for environment variable overrides and hot reloading.
 """
+
 import json
 import os
 import threading
@@ -153,9 +154,7 @@ class ConfigManager:
         return config
 
     def save_config(
-        self,
-        config: SystemConfiguration,
-        file_path: Optional[str] = None
+        self, config: SystemConfiguration, file_path: Optional[str] = None
     ) -> bool:
         """
         Save configuration to file.
@@ -245,10 +244,14 @@ class ConfigManager:
                 result.add_warning("Shell command execution is enabled - security risk")
 
             # Validate Windows settings
-            if os.name == 'nt':
+            if os.name == "nt":
                 windows = config.windows
-                if windows.get("service_mode", False) and not windows.get("use_wmi", True):
-                    result.add_warning("Service mode without WMI may have limited functionality")
+                if windows.get("service_mode", False) and not windows.get(
+                    "use_wmi", True
+                ):
+                    result.add_warning(
+                        "Service mode without WMI may have limited functionality"
+                    )
 
         except Exception as e:
             result.add_error(f"Validation error: {e}")
@@ -279,7 +282,10 @@ class ConfigManager:
             return False
 
         # Validate detection patterns
-        if not isinstance(config_data["detection_patterns"], list) or not config_data["detection_patterns"]:
+        if (
+            not isinstance(config_data["detection_patterns"], list)
+            or not config_data["detection_patterns"]
+        ):
             return False
 
         return True
@@ -295,7 +301,7 @@ class ConfigManager:
             Migrated SystemConfiguration
         """
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 old_data = json.load(f)
 
             # Start with default configuration
@@ -343,6 +349,7 @@ class ConfigManager:
 
         try:
             import shutil
+
             shutil.copy2(config_file, backup_path)
             return backup_path
         except Exception as e:
@@ -364,6 +371,7 @@ class ConfigManager:
                 return False
 
             import shutil
+
             shutil.copy2(backup_path, target_path)
 
             # Reload configuration
@@ -380,11 +388,7 @@ class ConfigManager:
             return self.current_config
 
     def update_config_setting(
-        self,
-        section: str,
-        key: str,
-        value: Any,
-        save_immediately: bool = True
+        self, section: str, key: str, value: Any, save_immediately: bool = True
     ) -> bool:
         """
         Update a specific configuration setting.
@@ -440,39 +444,31 @@ class ConfigManager:
             "properties": {
                 "log_level": {
                     "type": "string",
-                    "enum": ["DEBUG", "INFO", "WARN", "ERROR"]
+                    "enum": ["DEBUG", "INFO", "WARN", "ERROR"],
                 },
                 "detection_patterns": {
                     "type": "array",
                     "minItems": 1,
-                    "items": {"type": "string"}
+                    "items": {"type": "string"},
                 },
-                "max_log_size_mb": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 1000
-                },
-                "backup_count": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 10
-                },
+                "max_log_size_mb": {"type": "integer", "minimum": 1, "maximum": 1000},
+                "backup_count": {"type": "integer", "minimum": 0, "maximum": 10},
                 "monitoring": {
                     "type": "object",
                     "required": ["check_interval", "task_timeout"],
                     "properties": {
                         "check_interval": {"type": "number", "minimum": 0.1},
-                        "task_timeout": {"type": "integer", "minimum": 60}
-                    }
+                        "task_timeout": {"type": "integer", "minimum": 60},
+                    },
                 },
                 "timing": {
                     "type": "object",
                     "required": ["default_cooldown_hours"],
                     "properties": {
                         "default_cooldown_hours": {"type": "number", "minimum": 0.1}
-                    }
-                }
-            }
+                    },
+                },
+            },
         }
 
     def get_config_summary(self) -> Dict[str, Any]:
@@ -486,7 +482,7 @@ class ConfigManager:
             "pattern_count": len(self.current_config.detection_patterns),
             "monitoring_interval": self.current_config.monitoring.get("check_interval"),
             "cooldown_hours": self.current_config.timing.get("default_cooldown_hours"),
-            "last_modified": self.current_config.last_modified
+            "last_modified": self.current_config.last_modified,
         }
 
     def __str__(self) -> str:
@@ -494,9 +490,4 @@ class ConfigManager:
         config_file = os.path.basename(self.config_file) if self.config_file else "None"
         has_config = self.current_config is not None
 
-        return (
-            f"ConfigManager("
-            f"file={config_file}, "
-            f"loaded={has_config}"
-            f")"
-        )
+        return f"ConfigManager(" f"file={config_file}, " f"loaded={has_config}" f")"

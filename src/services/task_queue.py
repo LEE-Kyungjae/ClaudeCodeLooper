@@ -1,4 +1,5 @@
 """TaskQueueManager service for queued post-restart tasks."""
+
 from __future__ import annotations
 
 from typing import List, Iterable, Optional
@@ -48,7 +49,9 @@ class TaskQueueManager:
 
     def remove_indices(self, indices: Iterable[int]) -> List[QueuedTask]:
         """Remove tasks by 1-based indices, returning removed tasks."""
-        unique_indices = sorted({idx for idx in indices if isinstance(idx, int)}, reverse=True)
+        unique_indices = sorted(
+            {idx for idx in indices if isinstance(idx, int)}, reverse=True
+        )
         removed_with_index = []
 
         for idx in unique_indices:

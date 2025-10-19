@@ -1,4 +1,5 @@
 """Queue command for managing post-restart task automation."""
+
 import click
 from typing import List
 
@@ -11,16 +12,33 @@ def queue(ctx):
 
 
 @queue.command()
-@click.argument('task_words', nargs=-1, required=True)
-@click.option('--template', 'template_id', help='사전 정의된 템플릿 ID')
-@click.option('--note', help='추가 메모나 컨텍스트')
-@click.option('--guideline', 'extra_guidelines', multiple=True, help='추가 체크리스트 항목 (여러 번 사용 가능)')
-@click.option('--post', 'extra_post_commands', multiple=True, help='업무 후 실행할 명령 (여러 번 사용 가능)')
+@click.argument("task_words", nargs=-1, required=True)
+@click.option("--template", "template_id", help="사전 정의된 템플릿 ID")
+@click.option("--note", help="추가 메모나 컨텍스트")
+@click.option(
+    "--guideline",
+    "extra_guidelines",
+    multiple=True,
+    help="추가 체크리스트 항목 (여러 번 사용 가능)",
+)
+@click.option(
+    "--post",
+    "extra_post_commands",
+    multiple=True,
+    help="업무 후 실행할 명령 (여러 번 사용 가능)",
+)
 @click.pass_context
-def add(ctx, task_words: tuple, template_id: str, note: str, extra_guidelines: tuple, extra_post_commands: tuple):
+def add(
+    ctx,
+    task_words: tuple,
+    template_id: str,
+    note: str,
+    extra_guidelines: tuple,
+    extra_post_commands: tuple,
+):
     """Add a task to the queue."""
     cli_ctx = ctx.find_root().obj
-    template_manager = getattr(cli_ctx, 'template_manager', None)
+    template_manager = getattr(cli_ctx, "template_manager", None)
     description = " ".join(task_words).strip()
 
     if not description:
@@ -39,8 +57,13 @@ def add(ctx, task_words: tuple, template_id: str, note: str, extra_guidelines: t
 
         template = template_manager.get(template_id)
         if not template:
-            available = ", ".join(t.template_id for t in template_manager.available_templates())
-            click.echo(f"Error: Unknown template '{template_id}'. Available: {available}", err=True)
+            available = ", ".join(
+                t.template_id for t in template_manager.available_templates()
+            )
+            click.echo(
+                f"Error: Unknown template '{template_id}'. Available: {available}",
+                err=True,
+            )
             raise SystemExit(1)
 
         persona_prompt = template.persona_prompt
@@ -50,7 +73,9 @@ def add(ctx, task_words: tuple, template_id: str, note: str, extra_guidelines: t
         post_commands = list(template.post_commands) + post_commands
 
     if extra_guidelines:
-        extra_section = ["### 추가 체크리스트"] + [f"- {item}" for item in extra_guidelines]
+        extra_section = ["### 추가 체크리스트"] + [
+            f"- {item}" for item in extra_guidelines
+        ]
         extra_text = "\n".join(extra_section)
         guideline_prompt = (
             f"{guideline_prompt}\n\n{extra_text}" if guideline_prompt else extra_text
@@ -101,7 +126,7 @@ def list_tasks(ctx):
 
 
 @queue.command()
-@click.argument('indices', nargs=-1)
+@click.argument("indices", nargs=-1)
 @click.pass_context
 def remove(ctx, indices: tuple):
     """Remove tasks by their displayed numbers."""
@@ -130,7 +155,7 @@ def remove(ctx, indices: tuple):
 
 
 @queue.command()
-@click.option('--confirm', is_flag=True, help='Confirm clearing without prompt')
+@click.option("--confirm", is_flag=True, help="Confirm clearing without prompt")
 @click.pass_context
 def clear(ctx, confirm: bool):
     """Clear all queued tasks."""
@@ -153,7 +178,7 @@ def clear(ctx, confirm: bool):
 def list_templates(ctx):
     """List available task templates."""
     cli_ctx = ctx.find_root().obj
-    template_manager = getattr(cli_ctx, 'template_manager', None)
+    template_manager = getattr(cli_ctx, "template_manager", None)
 
     if not template_manager:
         click.echo("No templates configured.")
