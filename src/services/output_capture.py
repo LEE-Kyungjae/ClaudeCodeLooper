@@ -3,6 +3,7 @@
 Handles real-time capture and buffering of process stdout/stderr streams
 with thread-safe queue management and configurable buffer sizes.
 """
+
 import time
 import queue
 import threading
@@ -33,11 +34,7 @@ class OutputCapture:
         self._lock = threading.RLock()
         self._shutdown_event = threading.Event()
 
-    def start_capture(
-        self,
-        session_id: str,
-        process: subprocess.Popen
-    ) -> None:
+    def start_capture(self, session_id: str, process: subprocess.Popen) -> None:
         """Start capturing output from a process.
 
         Args:
@@ -49,7 +46,9 @@ class OutputCapture:
         """
         with self._lock:
             if session_id in self.output_queues:
-                raise ValueError(f"Output capture already active for session {session_id}")
+                raise ValueError(
+                    f"Output capture already active for session {session_id}"
+                )
 
             # Create output queue
             output_queue = queue.Queue(maxsize=self.output_buffer_size)
@@ -60,7 +59,7 @@ class OutputCapture:
                 target=self._capture_output,
                 args=(process, output_queue, session_id),
                 daemon=True,
-                name=f"OutputCapture-{session_id}"
+                name=f"OutputCapture-{session_id}",
             )
             output_thread.start()
             self.output_threads[session_id] = output_thread
@@ -131,7 +130,9 @@ class OutputCapture:
             ValueError: If no sessions are available
         """
         with self._lock:
-            target_session_id = session_id or next(iter(self.output_queues.keys()), None)
+            target_session_id = session_id or next(
+                iter(self.output_queues.keys()), None
+            )
             if not target_session_id:
                 raise ValueError("No monitored sessions available for output injection")
 
@@ -206,10 +207,7 @@ class OutputCapture:
         return count
 
     def _capture_output(
-        self,
-        process: subprocess.Popen,
-        output_queue: queue.Queue,
-        session_id: str
+        self, process: subprocess.Popen, output_queue: queue.Queue, session_id: str
     ) -> None:
         """Capture output from a process in a separate thread.
 

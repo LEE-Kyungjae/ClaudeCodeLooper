@@ -6,6 +6,7 @@ unified process monitoring and management capabilities.
 This refactored version delegates to specialized services for better
 maintainability and separation of concerns.
 """
+
 import time
 from datetime import datetime
 from typing import Dict, List, Optional, Any
@@ -49,7 +50,7 @@ class ProcessMonitor:
         command: str,
         session_id: Optional[str] = None,
         work_dir: Optional[str] = None,
-        env_vars: Optional[Dict[str, str]] = None
+        env_vars: Optional[Dict[str, str]] = None,
     ) -> ProcessInfo:
         """Start monitoring a Claude Code process.
 
@@ -76,7 +77,7 @@ class ProcessMonitor:
         if session_id in self.monitored_processes:
             raise ProcessStartError(
                 f"Session {session_id} is already being monitored",
-                details={"session_id": session_id}
+                details={"session_id": session_id},
             )
 
         try:
@@ -85,7 +86,7 @@ class ProcessMonitor:
                 command=command,
                 session_id=session_id,
                 work_dir=work_dir,
-                env_vars=env_vars
+                env_vars=env_vars,
             )
 
             # Register with health checker
@@ -93,14 +94,13 @@ class ProcessMonitor:
                 session_id=session_id,
                 pid=launch_result.pid,
                 command=launch_result.command,
-                start_time=launch_result.start_time
+                start_time=launch_result.start_time,
             )
 
             # Start output capture (if we have a real process handle)
             if launch_result.process_handle:
                 self.output_capture.start_capture(
-                    session_id=session_id,
-                    process=launch_result.process_handle
+                    session_id=session_id, process=launch_result.process_handle
                 )
 
             # Track session
@@ -233,7 +233,9 @@ class ProcessMonitor:
         # If the process is simulated, treat the send as successful and inject output
         if self.launcher.is_running(session_id):
             try:
-                self.output_capture.inject_output(f"[Simulated input] {text}", session_id=session_id)
+                self.output_capture.inject_output(
+                    f"[Simulated input] {text}", session_id=session_id
+                )
                 return True
             except Exception:
                 return False
@@ -285,7 +287,9 @@ class ProcessMonitor:
         Args:
             session_id: Session to terminate, or first available
         """
-        target_session_id = session_id or next(iter(self.monitored_processes.keys()), None)
+        target_session_id = session_id or next(
+            iter(self.monitored_processes.keys()), None
+        )
         if not target_session_id:
             return
 
@@ -303,16 +307,26 @@ class ProcessMonitor:
             Dictionary with CPU, memory, and thread metrics
         """
         import psutil
+
         try:
             current_process = psutil.Process()
             return {
                 "cpu_percent": current_process.cpu_percent(),
                 "memory_mb": current_process.memory_info().rss / 1024 / 1024,
                 "thread_count": current_process.num_threads(),
-                "open_files": len(current_process.open_files()) if hasattr(current_process, 'open_files') else 0
+                "open_files": (
+                    len(current_process.open_files())
+                    if hasattr(current_process, "open_files")
+                    else 0
+                ),
             }
         except Exception:
-            return {"cpu_percent": 0.0, "memory_mb": 0.0, "thread_count": 0, "open_files": 0}
+            return {
+                "cpu_percent": 0.0,
+                "memory_mb": 0.0,
+                "thread_count": 0,
+                "open_files": 0,
+            }
 
     def shutdown(self) -> None:
         """Shutdown all monitoring services and clean up resources."""
@@ -345,11 +359,11 @@ class ProcessMonitor:
 
 # Export original classes for backward compatibility
 __all__ = [
-    'ProcessMonitor',
-    'ProcessInfo',
-    'HealthMetrics',
-    'ProcessState',
-    'ProcessLauncher',
-    'OutputCapture',
-    'HealthChecker'
+    "ProcessMonitor",
+    "ProcessInfo",
+    "HealthMetrics",
+    "ProcessState",
+    "ProcessLauncher",
+    "OutputCapture",
+    "HealthChecker",
 ]

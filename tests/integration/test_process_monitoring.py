@@ -5,6 +5,7 @@ Claude Code process management, output capture, and system integration.
 
 This test MUST FAIL initially before implementation.
 """
+
 import pytest
 import time
 import subprocess
@@ -74,7 +75,7 @@ class TestProcessMonitoring:
         monitor = ProcessMonitor(config)
 
         # Start process that produces output
-        cmd = 'python -c "import time; [print(f\'line {i}\') or time.sleep(0.1) for i in range(5)]"'
+        cmd = "python -c \"import time; [print(f'line {i}') or time.sleep(0.1) for i in range(5)]\""
         process_info = monitor.start_monitoring(cmd)
 
         captured_output = []
@@ -129,7 +130,7 @@ class TestProcessMonitoring:
         # Start multiple processes
         processes = []
         for i in range(3):
-            cmd = f'python -c "import time; print(\'process {i}\'); time.sleep(2)"'
+            cmd = f"python -c \"import time; print('process {i}'); time.sleep(2)\""
             process_info = monitor.start_monitoring(cmd, session_id=f"session_{i}")
             processes.append(process_info)
 
@@ -153,7 +154,9 @@ class TestProcessMonitoring:
         monitor = ProcessMonitor(config)
 
         # Start resource-intensive process
-        cmd = 'python -c "x = [i**2 for i in range(100000)]; import time; time.sleep(1)"'
+        cmd = (
+            'python -c "x = [i**2 for i in range(100000)]; import time; time.sleep(1)"'
+        )
         process_info = monitor.start_monitoring(cmd)
 
         time.sleep(0.5)  # Let process run
@@ -176,9 +179,7 @@ class TestProcessMonitoring:
         from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
 
-        config = SystemConfiguration(
-            monitoring={"check_interval": 0.1}
-        )
+        config = SystemConfiguration(monitoring={"check_interval": 0.1})
         monitor = ProcessMonitor(config)
 
         # Start process that will crash
@@ -202,13 +203,11 @@ class TestProcessMonitoring:
         from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
 
-        config = SystemConfiguration(
-            monitoring={"output_buffer_size": 1000}
-        )
+        config = SystemConfiguration(monitoring={"output_buffer_size": 1000})
         monitor = ProcessMonitor(config)
 
         # Process that produces lots of output
-        cmd = 'python -c "for i in range(100): print(f\'Large output line {i} with extra text to fill buffer\')"'
+        cmd = "python -c \"for i in range(100): print(f'Large output line {i} with extra text to fill buffer')\""
         process_info = monitor.start_monitoring(cmd)
 
         time.sleep(1)  # Let it produce output
@@ -230,7 +229,7 @@ class TestProcessMonitoring:
         from src.lib.windows_process import WindowsProcessMonitor
         from src.models.system_configuration import SystemConfiguration
 
-        if os.name != 'nt':
+        if os.name != "nt":
             pytest.skip("Windows-specific test")
 
         config = SystemConfiguration()
@@ -293,7 +292,7 @@ class TestProcessMonitoring:
         # Start multiple processes
         processes = []
         for i in range(5):
-            cmd = f'python -c "import time; [print(f\'proc{i}-{j}\') for j in range(100)]; time.sleep(1)"'
+            cmd = f"python -c \"import time; [print(f'proc{i}-{j}') for j in range(100)]; time.sleep(1)\""
             process_info = monitor.start_monitoring(cmd, session_id=f"perf_test_{i}")
             processes.append(process_info)
 
@@ -304,7 +303,7 @@ class TestProcessMonitoring:
             # Should maintain performance
             monitor_overhead = monitor.get_monitoring_overhead()
             assert monitor_overhead["cpu_percent"] < 20  # Less than 20% CPU
-            assert monitor_overhead["memory_mb"] < 100   # Less than 100MB
+            assert monitor_overhead["memory_mb"] < 100  # Less than 100MB
             time.sleep(0.1)
 
         monitor.stop_all_monitoring()
@@ -320,15 +319,14 @@ class TestProcessMonitoring:
 
         # Create test directory
         import tempfile
+
         test_dir = tempfile.mkdtemp()
 
         try:
             # Start process with specific working directory
-            cmd = 'python -c "import os; print(f\'Working dir: {os.getcwd()}\')"'
+            cmd = "python -c \"import os; print(f'Working dir: {os.getcwd()}')\""
             process_info = monitor.start_monitoring(
-                cmd,
-                work_dir=test_dir,
-                env_vars={"TEST_VAR": "test_value"}
+                cmd, work_dir=test_dir, env_vars={"TEST_VAR": "test_value"}
             )
 
             time.sleep(0.5)
@@ -341,6 +339,7 @@ class TestProcessMonitoring:
 
         finally:
             import shutil
+
             shutil.rmtree(test_dir)
 
     @pytest.mark.integration
@@ -370,6 +369,8 @@ class TestProcessMonitoring:
 
         # Should recover gracefully
         recovered_processes = monitor.get_recovered_processes()
-        assert len(recovered_processes) >= 0  # May or may not recover depending on implementation
+        assert (
+            len(recovered_processes) >= 0
+        )  # May or may not recover depending on implementation
 
         monitor.stop_monitoring()
