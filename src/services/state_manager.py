@@ -3,6 +3,7 @@
 Handles saving and loading system state, backup management,
 and recovery across system restarts.
 """
+
 import json
 import os
 import shutil
@@ -24,7 +25,9 @@ class StateManager:
     def __init__(self, config: SystemConfiguration, state_dir: Optional[str] = None):
         """Initialize the state manager."""
         self.config = config
-        self.state_dir = state_dir or os.path.dirname(config.get_persistence_file_path())
+        self.state_dir = state_dir or os.path.dirname(
+            config.get_persistence_file_path()
+        )
         self.state_file = config.get_persistence_file_path()
         self.backup_dir = config.get_backup_directory_path()
 
@@ -71,9 +74,9 @@ class StateManager:
                     "metadata": {
                         "version": "1.0.0",
                         "saved_at": datetime.now().isoformat(),
-                        "config_version": self.config.config_version
+                        "config_version": self.config.config_version,
                     },
-                    "state": data_to_save
+                    "state": data_to_save,
                 }
 
                 # Create backup if enabled
@@ -82,11 +85,11 @@ class StateManager:
 
                 # Write to temporary file first (atomic operation)
                 temp_file = self.state_file + ".tmp"
-                with open(temp_file, 'w', encoding='utf-8') as f:
+                with open(temp_file, "w", encoding="utf-8") as f:
                     json.dump(save_data, f, indent=2, ensure_ascii=False)
 
                 # Atomic move
-                if os.name == 'nt':  # Windows
+                if os.name == "nt":  # Windows
                     if os.path.exists(self.state_file):
                         os.remove(self.state_file)
                 os.rename(temp_file, self.state_file)
@@ -121,7 +124,7 @@ class StateManager:
                 if not os.path.exists(self.state_file):
                     return None
 
-                with open(self.state_file, 'r', encoding='utf-8') as f:
+                with open(self.state_file, "r", encoding="utf-8") as f:
                     loaded_data = json.load(f)
 
                 # Validate structure
@@ -161,7 +164,7 @@ class StateManager:
         # Try fallback locations
         fallback_locations = [
             os.path.join(tempfile.gettempdir(), "claude-restart-state.json"),
-            os.path.expanduser("~/claude-restart-state-backup.json")
+            os.path.expanduser("~/claude-restart-state-backup.json"),
         ]
 
         for fallback_path in fallback_locations:
@@ -212,7 +215,7 @@ class StateManager:
             backup_files.sort(key=lambda x: x[1], reverse=True)
 
             # Remove excess backups
-            for filepath, _ in backup_files[self.max_backups:]:
+            for filepath, _ in backup_files[self.max_backups :]:
                 try:
                     os.remove(filepath)
                 except Exception:
@@ -238,7 +241,7 @@ class StateManager:
 
             # Try loading from most recent backup
             most_recent_backup = backup_files[0][0]
-            with open(most_recent_backup, 'r', encoding='utf-8') as f:
+            with open(most_recent_backup, "r", encoding="utf-8") as f:
                 loaded_data = json.load(f)
 
             if "state" in loaded_data:
@@ -306,8 +309,7 @@ class StateManager:
     def save_sessions(self, sessions: Dict[str, MonitoringSession]) -> bool:
         """Save monitoring sessions to state."""
         session_data = {
-            session_id: session.to_dict()
-            for session_id, session in sessions.items()
+            session_id: session.to_dict() for session_id, session in sessions.items()
         }
 
         self.update_cached_state({"sessions": session_data})
@@ -332,8 +334,7 @@ class StateManager:
     def save_waiting_periods(self, periods: Dict[str, WaitingPeriod]) -> bool:
         """Save waiting periods to state."""
         period_data = {
-            period_id: period.to_dict()
-            for period_id, period in periods.items()
+            period_id: period.to_dict() for period_id, period in periods.items()
         }
 
         self.update_cached_state({"waiting_periods": period_data})
@@ -385,12 +386,16 @@ class StateManager:
                 if filename.startswith("state_backup_") and filename.endswith(".json"):
                     filepath = os.path.join(self.backup_dir, filename)
                     stat = os.stat(filepath)
-                    backups.append({
-                        "filename": filename,
-                        "path": filepath,
-                        "size": stat.st_size,
-                        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat()
-                    })
+                    backups.append(
+                        {
+                            "filename": filename,
+                            "path": filepath,
+                            "size": stat.st_size,
+                            "modified": datetime.fromtimestamp(
+                                stat.st_mtime
+                            ).isoformat(),
+                        }
+                    )
 
             backups.sort(key=lambda x: x["modified"], reverse=True)
         except Exception as e:
@@ -434,7 +439,11 @@ class StateManager:
     def get_state_statistics(self) -> Dict[str, Any]:
         """Get state management statistics."""
         try:
-            state_size = os.path.getsize(self.state_file) if os.path.exists(self.state_file) else 0
+            state_size = (
+                os.path.getsize(self.state_file)
+                if os.path.exists(self.state_file)
+                else 0
+            )
             backup_count = len(self.get_backup_files())
 
             return {
@@ -444,7 +453,7 @@ class StateManager:
                 "auto_save_enabled": self.auto_save_enabled,
                 "last_save_time": self.last_save_time.isoformat(),
                 "state_dirty": self._state_dirty,
-                "cache_size": len(self._cached_state) if self._cached_state else 0
+                "cache_size": len(self._cached_state) if self._cached_state else 0,
             }
         except Exception:
             return {"error": "Failed to get statistics"}

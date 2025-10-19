@@ -5,6 +5,7 @@ across the entire system.
 
 This test MUST FAIL initially before implementation.
 """
+
 import json
 import pytest
 import tempfile
@@ -23,6 +24,7 @@ class TestConfigurationValidation:
     def teardown_method(self):
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
     @pytest.mark.integration
@@ -51,13 +53,10 @@ class TestConfigurationValidation:
             "detection_patterns": ["custom pattern 1", "custom pattern 2"],
             "max_log_size_mb": 25,
             "backup_count": 5,
-            "monitoring": {
-                "check_interval": 2,
-                "task_timeout": 600
-            }
+            "monitoring": {"check_interval": 2, "task_timeout": 600},
         }
 
-        with open(self.config_file, 'w') as f:
+        with open(self.config_file, "w") as f:
             json.dump(test_config, f)
 
         config_manager = ConfigManager()
@@ -78,20 +77,20 @@ class TestConfigurationValidation:
                 "log_level": "INFO",
                 "detection_patterns": ["usage limit", "5-hour limit"],
                 "max_log_size_mb": 50,
-                "backup_count": 3
+                "backup_count": 3,
             },
             {
                 "log_level": "ERROR",
                 "detection_patterns": ["rate limit exceeded"],
                 "max_log_size_mb": 100,
-                "backup_count": 0
-            }
+                "backup_count": 0,
+            },
         ]
 
         config_manager = ConfigManager()
 
         for test_config in valid_configs:
-            with open(self.config_file, 'w') as f:
+            with open(self.config_file, "w") as f:
                 json.dump(test_config, f)
 
             # Should not raise exception
@@ -110,20 +109,20 @@ class TestConfigurationValidation:
                 "log_level": "INVALID_LEVEL",
                 "detection_patterns": [],
                 "max_log_size_mb": -1,
-                "backup_count": -5
+                "backup_count": -5,
             },
             {
                 "log_level": "DEBUG",
                 "detection_patterns": None,
                 "max_log_size_mb": "not_a_number",
-                "backup_count": 15  # Too high
-            }
+                "backup_count": 15,  # Too high
+            },
         ]
 
         config_manager = ConfigManager()
 
         for test_config in invalid_configs:
-            with open(self.config_file, 'w') as f:
+            with open(self.config_file, "w") as f:
                 json.dump(test_config, f)
 
             with pytest.raises(Exception):
@@ -139,10 +138,10 @@ class TestConfigurationValidation:
         initial_config = {
             "log_level": "INFO",
             "detection_patterns": ["initial pattern"],
-            "max_log_size_mb": 25
+            "max_log_size_mb": 25,
         }
 
-        with open(self.config_file, 'w') as f:
+        with open(self.config_file, "w") as f:
             json.dump(initial_config, f)
 
         config_manager = ConfigManager()
@@ -156,10 +155,10 @@ class TestConfigurationValidation:
         updated_config = {
             "log_level": "DEBUG",
             "detection_patterns": ["updated pattern", "new pattern"],
-            "max_log_size_mb": 50
+            "max_log_size_mb": 50,
         }
 
-        with open(self.config_file, 'w') as f:
+        with open(self.config_file, "w") as f:
             json.dump(updated_config, f)
 
         # Reload config
@@ -180,10 +179,10 @@ class TestConfigurationValidation:
             "log_level": "INFO",
             "detection_patterns": ["original pattern"],
             "max_log_size_mb": 50,
-            "backup_count": 3
+            "backup_count": 3,
         }
 
-        with open(self.config_file, 'w') as f:
+        with open(self.config_file, "w") as f:
             json.dump(original_config, f)
 
         config_manager = ConfigManager()
@@ -197,17 +196,17 @@ class TestConfigurationValidation:
             "log_level": "ERROR",
             "detection_patterns": ["modified pattern"],
             "max_log_size_mb": 25,
-            "backup_count": 1
+            "backup_count": 1,
         }
 
-        with open(self.config_file, 'w') as f:
+        with open(self.config_file, "w") as f:
             json.dump(modified_config, f)
 
         # Restore from backup
         config_manager.restore_from_backup(backup_path, self.config_file)
 
         # Verify restoration
-        with open(self.config_file, 'r') as f:
+        with open(self.config_file, "r") as f:
             restored_config = json.load(f)
 
         assert restored_config["log_level"] == "INFO"
@@ -222,11 +221,11 @@ class TestConfigurationValidation:
         # Old version config (missing new fields)
         old_config = {
             "log_level": "INFO",
-            "detection_patterns": ["old pattern"]
+            "detection_patterns": ["old pattern"],
             # Missing: max_log_size_mb, backup_count, monitoring section
         }
 
-        with open(self.config_file, 'w') as f:
+        with open(self.config_file, "w") as f:
             json.dump(old_config, f)
 
         config_manager = ConfigManager()
@@ -273,10 +272,7 @@ class TestConfigurationValidation:
             "detection_patterns": ["pattern1", "pattern2"],
             "max_log_size_mb": 50,
             "backup_count": 3,
-            "monitoring": {
-                "check_interval": 1,
-                "task_timeout": 300
-            }
+            "monitoring": {"check_interval": 1, "task_timeout": 300},
         }
 
         # Invalid according to schema
@@ -284,7 +280,7 @@ class TestConfigurationValidation:
             "log_level": 123,  # Should be string
             "detection_patterns": "not_an_array",  # Should be array
             "max_log_size_mb": "fifty",  # Should be number
-            "extra_field": "not_allowed"  # Not in schema
+            "extra_field": "not_allowed",  # Not in schema
         }
 
         config_manager = ConfigManager()
@@ -305,10 +301,10 @@ class TestConfigurationValidation:
         config = {
             "log_level": "INFO",
             "detection_patterns": ["thread test"],
-            "max_log_size_mb": 50
+            "max_log_size_mb": 50,
         }
 
-        with open(self.config_file, 'w') as f:
+        with open(self.config_file, "w") as f:
             json.dump(config, f)
 
         config_manager = ConfigManager()

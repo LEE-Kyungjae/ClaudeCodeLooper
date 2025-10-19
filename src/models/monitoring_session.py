@@ -3,6 +3,7 @@
 Represents an active monitoring period of Claude Code terminal output,
 including start time, current status, and detection history.
 """
+
 import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any, List
@@ -14,6 +15,7 @@ from .restart_command_config import RestartCommandConfiguration
 
 class SessionStatus(str, Enum):
     """Possible states of a monitoring session."""
+
     INACTIVE = "inactive"
     ACTIVE = "active"
     WAITING = "waiting"
@@ -44,19 +46,18 @@ class MonitoringSession(BaseModel):
 
     class Config:
         """Pydantic configuration."""
-        use_enum_values = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
-    @validator('claude_command')
+        use_enum_values = True
+        json_encoders = {datetime: lambda v: v.isoformat()}
+
+    @validator("claude_command")
     def validate_claude_command(cls, v):
         """Validate Claude Code command."""
         if not v or not v.strip():
             raise ValueError("Claude command cannot be empty")
         return v.strip()
 
-    @validator('detection_count', 'error_count')
+    @validator("detection_count", "error_count")
     def validate_counts(cls, v):
         """Ensure counts are non-negative."""
         if v < 0:
@@ -134,7 +135,9 @@ class MonitoringSession(BaseModel):
             "status": self.status.value,
             "claude_process_id": self.claude_process_id,
             "detection_count": self.detection_count,
-            "last_activity": self.last_activity.isoformat() if self.last_activity else None,
+            "last_activity": (
+                self.last_activity.isoformat() if self.last_activity else None
+            ),
             "claude_command": self.claude_command,
             "working_directory": self.working_directory,
             "restart_commands": self.restart_commands,
@@ -142,8 +145,10 @@ class MonitoringSession(BaseModel):
             "waiting_period_id": self.waiting_period_id,
             "error_count": self.error_count,
             "last_error": self.last_error,
-            "restart_config": self.restart_config.to_dict() if self.restart_config else None,
-            "uptime_seconds": self.get_uptime_seconds()
+            "restart_config": (
+                self.restart_config.to_dict() if self.restart_config else None
+            ),
+            "uptime_seconds": self.get_uptime_seconds(),
         }
 
     @classmethod
@@ -162,7 +167,9 @@ class MonitoringSession(BaseModel):
         restart_config_data = data.pop("restart_config", None)
         instance = cls(**data)
         if restart_config_data:
-            instance.restart_config = RestartCommandConfiguration.from_dict(restart_config_data)
+            instance.restart_config = RestartCommandConfiguration.from_dict(
+                restart_config_data
+            )
         return instance
 
     def __str__(self) -> str:

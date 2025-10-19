@@ -3,6 +3,7 @@
 Handles waiting periods, countdown timers, clock drift detection,
 and precise timing for Claude Code restart cycles.
 """
+
 import time
 import threading
 from datetime import datetime, timedelta, timezone
@@ -17,6 +18,7 @@ from ..models.waiting_period import WaitingPeriod, PeriodStatus
 @dataclass
 class ClockDriftEvent:
     """Information about detected clock drift."""
+
     detection_time: datetime
     drift_seconds: float
     previous_time: datetime
@@ -36,7 +38,9 @@ class TimingManager:
 
         # Timing configuration
         self.check_frequency = config.timing.get("check_frequency_seconds", 60)
-        self.clock_drift_tolerance = config.timing.get("clock_drift_tolerance_seconds", 30)
+        self.clock_drift_tolerance = config.timing.get(
+            "clock_drift_tolerance_seconds", 30
+        )
         self.default_cooldown_hours = config.timing.get("default_cooldown_hours", 5.0)
 
         # Monitoring thread
@@ -58,7 +62,7 @@ class TimingManager:
         duration_hours: Optional[float] = None,
         session_id: Optional[str] = None,
         event_id: Optional[str] = None,
-        auto_start: bool = True
+        auto_start: bool = True,
     ) -> WaitingPeriod:
         """
         Add a new waiting period.
@@ -81,7 +85,7 @@ class TimingManager:
             duration_hours=duration_hours,
             session_id=session_id,
             associated_event_id=event_id,
-            check_interval_seconds=self.check_frequency
+            check_interval_seconds=self.check_frequency,
         )
 
         with self._lock:
@@ -96,7 +100,9 @@ class TimingManager:
 
         return waiting_period
 
-    def remove_waiting_period(self, period_id: str, mark_completed: bool = True) -> bool:
+    def remove_waiting_period(
+        self, period_id: str, mark_completed: bool = True
+    ) -> bool:
         """
         Remove a waiting period.
 
@@ -181,7 +187,9 @@ class TimingManager:
                         try:
                             callback(period)
                         except Exception as e:
-                            print(f"Error executing completion callback for {period_id}: {e}")
+                            print(
+                                f"Error executing completion callback for {period_id}: {e}"
+                            )
 
                     # Move to completed list
                     self.completed_periods.append(period)
@@ -190,7 +198,9 @@ class TimingManager:
 
         return completed_ids
 
-    def set_completion_callback(self, period_id: str, callback: Callable[[WaitingPeriod], None]) -> bool:
+    def set_completion_callback(
+        self, period_id: str, callback: Callable[[WaitingPeriod], None]
+    ) -> bool:
         """
         Set a callback to execute when a waiting period completes.
 
@@ -263,7 +273,7 @@ class TimingManager:
                 drift_seconds=drift,
                 previous_time=self.last_clock_check,
                 current_time=current_time,
-                action_taken="adjusting_periods"
+                action_taken="adjusting_periods",
             )
 
             self.clock_drift_events.append(drift_event)
@@ -300,6 +310,7 @@ class TimingManager:
         """Get system boot time."""
         try:
             import psutil
+
             boot_timestamp = psutil.boot_time()
             return datetime.fromtimestamp(boot_timestamp)
         except Exception:
@@ -314,7 +325,8 @@ class TimingManager:
             avg_duration = 0.0
             if completed_count > 0:
                 total_duration = sum(
-                    p.get_elapsed_seconds() for p in self.completed_periods
+                    p.get_elapsed_seconds()
+                    for p in self.completed_periods
                     if p.is_completed()
                 )
                 avg_duration = total_duration / completed_count
@@ -328,7 +340,7 @@ class TimingManager:
                 "average_period_duration_seconds": avg_duration,
                 "system_uptime_hours": self.get_system_uptime().total_seconds() / 3600,
                 "last_clock_check": self.last_clock_check.isoformat(),
-                "default_cooldown_hours": self.default_cooldown_hours
+                "default_cooldown_hours": self.default_cooldown_hours,
             }
 
     def create_notification_schedule(self, period_id: str) -> List[datetime]:
@@ -362,7 +374,9 @@ class TimingManager:
 
         self.monitoring_active = True
         self._shutdown_event.clear()
-        self.monitoring_thread = threading.Thread(target=self._monitoring_loop, daemon=True)
+        self.monitoring_thread = threading.Thread(
+            target=self._monitoring_loop, daemon=True
+        )
         self.monitoring_thread.start()
 
     def _monitoring_loop(self) -> None:

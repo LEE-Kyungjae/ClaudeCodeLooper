@@ -5,6 +5,7 @@ accurately identify Claude Code usage limits from terminal output.
 
 This test MUST FAIL initially before implementation.
 """
+
 import pytest
 import time
 import re
@@ -21,7 +22,7 @@ class TestLimitDetectionPatterns:
             "5-hour limit reached",
             "please wait",
             r"rate limit.*5\s*hours?",
-            "quota exceeded"
+            "quota exceeded",
         ]
 
     @pytest.mark.integration
@@ -38,7 +39,7 @@ class TestLimitDetectionPatterns:
             "Error: Usage limit exceeded. Please wait 5 hours.",
             "Rate limit reached - please wait 5 hours before continuing",
             "You have exceeded your 5-hour usage limit",
-            "Please wait 5 hours before using Claude Code again"
+            "Please wait 5 hours before using Claude Code again",
         ]
 
         for output in test_outputs:
@@ -53,9 +54,7 @@ class TestLimitDetectionPatterns:
         from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
 
-        config = SystemConfiguration(
-            detection_patterns=self.test_patterns
-        )
+        config = SystemConfiguration(detection_patterns=self.test_patterns)
         detector = PatternDetector(config)
 
         # Test each custom pattern
@@ -64,7 +63,7 @@ class TestLimitDetectionPatterns:
             ("5-hour limit reached, comeback later", "5-hour limit reached"),
             ("Please wait before making more requests", "please wait"),
             ("Rate limit active for 5 hours", r"rate limit.*5\s*hours?"),
-            ("Quota exceeded - try again later", "quota exceeded")
+            ("Quota exceeded - try again later", "quota exceeded"),
         ]
 
         for output, expected_pattern in test_cases:
@@ -83,7 +82,7 @@ class TestLimitDetectionPatterns:
             r"wait.*(\d+):\d+:\d+",  # Wait HH:MM:SS format
             r"exceeded.*limit.*(\d+)",
             r"rate.*limit.*(\d+)",
-            r"quota.*(\d+).*exceeded"
+            r"quota.*(\d+).*exceeded",
         ]
 
         config = SystemConfiguration(detection_patterns=regex_patterns)
@@ -94,7 +93,7 @@ class TestLimitDetectionPatterns:
             "Please wait 04:59:30 before continuing",
             "You have exceeded limit 100 for today",
             "Rate limit 50 requests exceeded",
-            "Quota 1000 tokens exceeded"
+            "Quota 1000 tokens exceeded",
         ]
 
         for output in test_outputs:
@@ -120,7 +119,7 @@ class TestLimitDetectionPatterns:
             "rate limit reached",
             "RATE LIMIT REACHED",
             "please wait 5 hours",
-            "PLEASE WAIT 5 HOURS"
+            "PLEASE WAIT 5 HOURS",
         ]
 
         for output in test_cases:
@@ -133,9 +132,7 @@ class TestLimitDetectionPatterns:
         from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
 
-        config = SystemConfiguration(
-            detection_patterns=["usage.*limit", "wait.*hours"]
-        )
+        config = SystemConfiguration(detection_patterns=["usage.*limit", "wait.*hours"])
         detector = PatternDetector(config)
 
         multiline_output = """
@@ -164,7 +161,7 @@ class TestLimitDetectionPatterns:
             "I will wait 5 hours for the meeting",  # User talking about waiting
             "Usage limit configuration updated",  # System message about config
             "Please wait while loading...",  # Generic loading message
-            "5 hours ago I started this task"  # Time reference
+            "5 hours ago I started this task",  # Time reference
         ]
 
         for output in false_positives:
@@ -193,7 +190,9 @@ class TestLimitDetectionPatterns:
         detection_time = time.time() - start_time
 
         assert detection is not None
-        assert detection_time < 0.1, f"Detection took {detection_time}s, should be < 0.1s"
+        assert (
+            detection_time < 0.1
+        ), f"Detection took {detection_time}s, should be < 0.1s"
 
     @pytest.mark.integration
     def test_streaming_detection(self):
@@ -201,9 +200,7 @@ class TestLimitDetectionPatterns:
         from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
 
-        config = SystemConfiguration(
-            detection_patterns=["usage limit"]
-        )
+        config = SystemConfiguration(detection_patterns=["usage limit"])
         detector = PatternDetector(config)
 
         # Simulate streaming chunks
@@ -212,7 +209,7 @@ class TestLimitDetectionPatterns:
             "Processing request...\n",
             "Error: Your usage",
             " limit has been exceeded.\n",
-            "Please wait 5 hours.\n"
+            "Please wait 5 hours.\n",
         ]
 
         detections = []
@@ -236,7 +233,7 @@ class TestLimitDetectionPatterns:
             "limit",  # Generic
             "usage limit",  # More specific
             "usage limit exceeded",  # Most specific
-            "5-hour usage limit exceeded"  # Very specific
+            "5-hour usage limit exceeded",  # Very specific
         ]
 
         config = SystemConfiguration(detection_patterns=patterns)
@@ -256,9 +253,7 @@ class TestLimitDetectionPatterns:
         from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
 
-        config = SystemConfiguration(
-            detection_patterns=["usage limit exceeded"]
-        )
+        config = SystemConfiguration(detection_patterns=["usage limit exceeded"])
         detector = PatternDetector(config)
 
         noisy_output = """
@@ -281,9 +276,7 @@ class TestLimitDetectionPatterns:
         from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
 
-        config = SystemConfiguration(
-            detection_patterns=["usage limit"]
-        )
+        config = SystemConfiguration(detection_patterns=["usage limit"])
         detector = PatternDetector(config)
 
         # First detection
@@ -305,9 +298,7 @@ class TestLimitDetectionPatterns:
         from src.models.system_configuration import SystemConfiguration
 
         # Initial patterns
-        config = SystemConfiguration(
-            detection_patterns=["old pattern"]
-        )
+        config = SystemConfiguration(detection_patterns=["old pattern"])
         detector = PatternDetector(config)
 
         # Should not detect new pattern initially
@@ -338,7 +329,7 @@ class TestLimitDetectionPatterns:
         unicode_tests = [
             "오류: 사용 제한에 도달했습니다",  # Korean
             "错误：使用限制已达到",  # Chinese
-            "Error: límite de uso alcanzado"  # Spanish
+            "Error: límite de uso alcanzado",  # Spanish
         ]
 
         for test_text in unicode_tests:

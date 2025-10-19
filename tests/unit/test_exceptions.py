@@ -1,4 +1,5 @@
 """Unit tests for custom exceptions."""
+
 import pytest
 from src.exceptions import (
     MonitoringException,
@@ -6,7 +7,7 @@ from src.exceptions import (
     ProcessStartError,
     DetectionException,
     ConfigurationException,
-    with_context
+    with_context,
 )
 
 
@@ -47,8 +48,7 @@ class TestProcessExceptions:
     def test_process_start_error(self):
         """Test ProcessStartError with context."""
         exc = ProcessStartError(
-            "Failed to start",
-            details={"command": "claude", "exit_code": 1}
+            "Failed to start", details={"command": "claude", "exit_code": 1}
         )
         assert exc.message == "Failed to start"
         assert exc.details["command"] == "claude"
@@ -81,7 +81,7 @@ class TestExceptionContext:
 
         # Should return the same exception without modification
         assert result is exc
-        assert not hasattr(result, 'details')
+        assert not hasattr(result, "details")
 
 
 class TestDetectionException:
@@ -99,8 +99,7 @@ class TestConfigurationException:
     def test_configuration_exception(self):
         """Test ConfigurationException with details."""
         exc = ConfigurationException(
-            "Invalid config",
-            details={"file": "config.json", "line": 42}
+            "Invalid config", details={"file": "config.json", "line": 42}
         )
         assert "Invalid config" in str(exc)
         assert exc.details["file"] == "config.json"
