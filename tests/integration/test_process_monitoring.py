@@ -293,7 +293,11 @@ class TestProcessMonitoring:
         # Start multiple processes
         processes = []
         for i in range(5):
-            cmd = f'python -c "import time; [print(f\'proc{i}-{j}\') for j in range(100)]; time.sleep(1)"'
+            cmd = (
+                "python -c \"import time; "
+                "[print('proc{i}-{{}}'.format(j)) for j in range(100)]; "
+                "time.sleep(1)\""
+            ).format(i=i)
             process_info = monitor.start_monitoring(cmd, session_id=f"perf_test_{i}")
             processes.append(process_info)
 
