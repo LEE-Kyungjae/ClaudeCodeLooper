@@ -1,4 +1,4 @@
-# Queued Task - List ("/cl:큐리스트")
+# List queued tasks
 
 Display the tasks currently scheduled to run after the cooldown restart.
 
@@ -7,6 +7,6 @@ Display the tasks currently scheduled to run after the cooldown restart.
    ```bash
    python -m src.cli.main queue list
    ```
-2. 각 항목에 표시된 템플릿(`[]` 안의 레이블)과 메모를 함께 전달합니다.
-3. 후속 명령이 필요하면 `queue add --post`로 추가할 수 있다는 점을 안내합니다.
-4. 항목이 없으면 큐가 비어 있다고 알려 주세요.
+2. Share the template (label in `[]`) and memo shown for each item.
+3. If follow-up commands are needed, inform that tasks can be added with `queue add --post`.
+4. If no items exist, inform the user that the queue is empty.
