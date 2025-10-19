@@ -3,6 +3,7 @@
 Represents global system settings and preferences for the automated
 restart monitoring system.
 """
+
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, Field, validator
 from enum import Enum
@@ -12,6 +13,7 @@ import os
 
 class LogLevel(str, Enum):
     """Available log levels."""
+
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARN = "WARN"
@@ -33,13 +35,15 @@ class SystemConfiguration(BaseModel):
     backup_count: int = Field(default=3, ge=0, le=10)
 
     # Detection patterns
-    detection_patterns: List[str] = Field(default_factory=lambda: [
-        "usage limit exceeded",
-        "5-hour limit",
-        "please wait",
-        r"rate.*limit.*\d+.*hours?",
-        "quota exceeded"
-    ])
+    detection_patterns: List[str] = Field(
+        default_factory=lambda: [
+            "usage limit exceeded",
+            "5-hour limit",
+            "please wait",
+            r"rate.*limit.*\d+.*hours?",
+            "quota exceeded",
+        ]
+    )
 
     # File paths
     persistence_file: str = Field(default="state.json")
@@ -47,68 +51,82 @@ class SystemConfiguration(BaseModel):
     backup_directory: str = Field(default="backups")
 
     # Monitoring settings
-    monitoring: Dict[str, Any] = Field(default_factory=lambda: {
-        "check_interval": 1.0,
-        "task_timeout": 300,
-        "output_buffer_size": 1000,
-        "max_processes": 5,
-        "allow_process_simulation": True,
-        "test_mode": False
-    })
+    monitoring: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "check_interval": 1.0,
+            "task_timeout": 300,
+            "output_buffer_size": 1000,
+            "max_processes": 5,
+            "allow_process_simulation": True,
+            "test_mode": False,
+        }
+    )
 
     # Timing configuration
-    timing: Dict[str, Any] = Field(default_factory=lambda: {
-        "default_cooldown_hours": 5.0,
-        "check_frequency_seconds": 60,
-        "grace_period_seconds": 10,
-        "clock_drift_tolerance_seconds": 30
-    })
+    timing: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "default_cooldown_hours": 5.0,
+            "check_frequency_seconds": 60,
+            "grace_period_seconds": 10,
+            "clock_drift_tolerance_seconds": 30,
+        }
+    )
 
     # Notification settings
-    notifications: Dict[str, Any] = Field(default_factory=lambda: {
-        "enabled": True,
-        "show_progress": True,
-        "notification_intervals": [0.5, 0.25, 0.1],  # Fractions remaining
-        "sound_enabled": False,
-        "desktop_notifications": True
-    })
+    notifications: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "enabled": True,
+            "show_progress": True,
+            "notification_intervals": [0.5, 0.25, 0.1],  # Fractions remaining
+            "sound_enabled": False,
+            "desktop_notifications": True,
+        }
+    )
 
     # Performance settings
-    performance: Dict[str, Any] = Field(default_factory=lambda: {
-        "max_memory_mb": 500,
-        "cpu_limit_percent": 20,
-        "io_priority": "normal",
-        "process_priority": "normal"
-    })
+    performance: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "max_memory_mb": 500,
+            "cpu_limit_percent": 20,
+            "io_priority": "normal",
+            "process_priority": "normal",
+        }
+    )
 
     # Security and reliability
-    security: Dict[str, Any] = Field(default_factory=lambda: {
-        "allow_shell_commands": False,
-        "restricted_directories": [],
-        "max_command_length": 1000,
-        "validate_commands": True
-    })
+    security: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "allow_shell_commands": False,
+            "restricted_directories": [],
+            "max_command_length": 1000,
+            "validate_commands": True,
+        }
+    )
 
     # Windows-specific settings
-    windows: Dict[str, Any] = Field(default_factory=lambda: {
-        "use_wmi": True,
-        "service_mode": False,
-        "hide_console": False,
-        "startup_delay_seconds": 5
-    })
+    windows: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "use_wmi": True,
+            "service_mode": False,
+            "hide_console": False,
+            "startup_delay_seconds": 5,
+        }
+    )
 
     class Config:
         """Pydantic configuration."""
+
         use_enum_values = True
         validate_assignment = True
 
-    @validator('detection_patterns')
+    @validator("detection_patterns")
     def validate_detection_patterns(cls, v):
         """Validate detection patterns are not empty and compilable."""
         if not v:
             raise ValueError("Detection patterns cannot be empty")
 
         import re
+
         for pattern in v:
             if not pattern or not pattern.strip():
                 raise ValueError("Detection patterns cannot contain empty strings")
@@ -119,24 +137,29 @@ class SystemConfiguration(BaseModel):
 
         return [p.strip() for p in v]
 
-    @validator('max_log_size_mb')
+    @validator("max_log_size_mb")
     def validate_log_size(cls, v):
         """Validate log size is reasonable."""
         if not 1 <= v <= 1000:
             raise ValueError("Log size must be between 1 and 1000 MB")
         return v
 
-    @validator('backup_count')
+    @validator("backup_count")
     def validate_backup_count(cls, v):
         """Validate backup count is reasonable."""
         if not 0 <= v <= 10:
             raise ValueError("Backup count must be between 0 and 10")
         return v
 
-    @validator('monitoring')
+    @validator("monitoring")
     def validate_monitoring_settings(cls, v):
         """Validate monitoring configuration."""
-        required_keys = ["check_interval", "task_timeout", "output_buffer_size", "max_processes"]
+        required_keys = [
+            "check_interval",
+            "task_timeout",
+            "output_buffer_size",
+            "max_processes",
+        ]
         for key in required_keys:
             if key not in v:
                 raise ValueError(f"Missing required monitoring setting: {key}")
@@ -153,7 +176,7 @@ class SystemConfiguration(BaseModel):
 
         return v
 
-    @validator('timing')
+    @validator("timing")
     def validate_timing_settings(cls, v):
         """Validate timing configuration."""
         required_keys = ["default_cooldown_hours", "check_frequency_seconds"]
@@ -168,7 +191,7 @@ class SystemConfiguration(BaseModel):
 
         return v
 
-    @validator('performance')
+    @validator("performance")
     def validate_performance_settings(cls, v):
         """Validate performance configuration."""
         if "max_memory_mb" in v and not 50 <= v["max_memory_mb"] <= 2000:
@@ -184,7 +207,7 @@ class SystemConfiguration(BaseModel):
             return os.path.expandvars(os.path.expanduser(self.log_file_path))
 
         # Default log file location
-        if os.name == 'nt':  # Windows
+        if os.name == "nt":  # Windows
             log_dir = os.path.expandvars("%LOCALAPPDATA%\\claude-restart-monitor")
         else:
             log_dir = os.path.expanduser("~/.claude-restart-monitor")
@@ -198,7 +221,7 @@ class SystemConfiguration(BaseModel):
             return self.persistence_file
 
         # Relative to default directory
-        if os.name == 'nt':  # Windows
+        if os.name == "nt":  # Windows
             data_dir = os.path.expandvars("%LOCALAPPDATA%\\claude-restart-monitor")
         else:
             data_dir = os.path.expanduser("~/.claude-restart-monitor")
@@ -340,7 +363,7 @@ class SystemConfiguration(BaseModel):
         # Ensure directory exists
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(self.dict(), f, indent=2, ensure_ascii=False)
 
     def __str__(self) -> str:
@@ -385,7 +408,7 @@ class SystemConfiguration(BaseModel):
         """Load configuration from JSON file with default merge."""
         import json
 
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         default_dict = cls.create_default().dict()

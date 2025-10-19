@@ -1,4 +1,5 @@
 """Unit tests for PatternDetector service."""
+
 import pytest
 import re
 from unittest.mock import Mock, MagicMock
@@ -43,7 +44,9 @@ class TestPatternMatching:
         config.detection_patterns = [r"usage limit exceeded"]
 
         detector = PatternDetector(config)
-        event = detector.detect_limit_message("Error: usage limit exceeded - please wait")
+        event = detector.detect_limit_message(
+            "Error: usage limit exceeded - please wait"
+        )
 
         assert event is not None
         assert event.matched_text is not None
@@ -110,14 +113,11 @@ class TestConfidenceCalculation:
             r"limit.*exceeded",
             "limit exceeded",
             "usage limit exceeded - wait 5 hours",
-            0
+            0,
         )
 
         confidence_low = detector._calculate_confidence(
-            r"test",
-            "test",
-            "simple test message",
-            0
+            r"test", "test", "simple test message", 0
         )
 
         assert confidence_high > confidence_low
@@ -131,7 +131,7 @@ class TestConfidenceCalculation:
             r"very.*long.*specific.*pattern",
             "very long specific pattern with limit exceeded wait hours quota",
             "very long specific pattern with limit exceeded wait hours quota rate",
-            0
+            0,
         )
 
         assert confidence <= 1.0
@@ -196,8 +196,7 @@ class TestPerformanceOptimization:
 
         detector = PatternDetector(config)
         result = detector._check_line_for_patterns(
-            "usage limit exceeded wait 5 hours",
-            1
+            "usage limit exceeded wait 5 hours", 1
         )
 
         # Should match the first pattern with high confidence

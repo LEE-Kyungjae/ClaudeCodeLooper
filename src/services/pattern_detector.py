@@ -3,6 +3,7 @@
 Handles real-time detection of usage limit messages from Claude Code output
 using configurable regex patterns with confidence scoring and context capture.
 """
+
 import re
 import time
 from datetime import datetime
@@ -18,6 +19,7 @@ from ..models.limit_detection_event import LimitDetectionEvent
 @dataclass
 class DetectionResult:
     """Result of pattern detection."""
+
     matched: bool
     pattern: Optional[str] = None
     matched_text: Optional[str] = None
@@ -84,7 +86,7 @@ class PatternDetector:
         try:
             with self._lock:
                 # Add to buffer for context
-                lines = text.split('\n')
+                lines = text.split("\n")
                 for line in lines:
                     self.line_number += 1
                     self.output_buffer.append((self.line_number, line.strip()))
@@ -130,10 +132,7 @@ class PatternDetector:
             match = pattern.search(line)
             if match:
                 confidence = self._calculate_confidence(
-                    pattern.pattern,
-                    match.group(),
-                    line,
-                    i
+                    pattern.pattern, match.group(), line, i
                 )
 
                 if confidence > best_confidence:
@@ -145,7 +144,7 @@ class PatternDetector:
                         confidence=confidence,
                         line_number=line_number,
                         context_before=self._get_context_before(line_number),
-                        context_after=self._get_context_after(line_number)
+                        context_after=self._get_context_after(line_number),
                     )
 
                     # Early exit optimization: if very high confidence, no need to check more
@@ -158,7 +157,9 @@ class PatternDetector:
 
         return DetectionResult(matched=False)
 
-    def _calculate_confidence(self, pattern: str, matched_text: str, full_line: str, pattern_index: int) -> float:
+    def _calculate_confidence(
+        self, pattern: str, matched_text: str, full_line: str, pattern_index: int
+    ) -> float:
         """Calculate confidence score for a pattern match."""
         confidence = 0.5  # Base confidence
 
@@ -170,7 +171,9 @@ class PatternDetector:
 
         # Keyword presence bonus
         limit_keywords = ["limit", "exceeded", "wait", "hours", "quota", "rate"]
-        keyword_count = sum(1 for keyword in limit_keywords if keyword.lower() in full_line.lower())
+        keyword_count = sum(
+            1 for keyword in limit_keywords if keyword.lower() in full_line.lower()
+        )
         confidence += min(0.3, keyword_count * 0.1)
 
         # Time-related patterns bonus
@@ -181,7 +184,7 @@ class PatternDetector:
                 break
 
         # Number presence bonus (often indicates specific limits)
-        if re.search(r'\b\d+\b', matched_text):
+        if re.search(r"\b\d+\b", matched_text):
             confidence += 0.1
 
         # Pattern order bonus (earlier patterns are more specific)
@@ -202,10 +205,22 @@ class PatternDetector:
     def _is_system_message(self, line: str) -> bool:
         """Check if line is a system message that should be ignored."""
         system_indicators = [
-            "[DEBUG]", "[INFO]", "[WARN]", "[ERROR]", "[TRACE]",
-            "claude-code:", "system:", "debug:", "log:",
-            "timestamp:", "process id:", "thread:", "memory:",
-            "loading", "initializing", "connecting"
+            "[DEBUG]",
+            "[INFO]",
+            "[WARN]",
+            "[ERROR]",
+            "[TRACE]",
+            "claude-code:",
+            "system:",
+            "debug:",
+            "log:",
+            "timestamp:",
+            "process id:",
+            "thread:",
+            "memory:",
+            "loading",
+            "initializing",
+            "connecting",
         ]
 
         line_lower = line.lower().strip()
@@ -218,7 +233,7 @@ class PatternDetector:
             if stored_line_num < line_number and len(context_lines) < lines:
                 context_lines.append(stored_line)
 
-        return '\n'.join(reversed(context_lines))
+        return "\n".join(reversed(context_lines))
 
     def _get_context_after(self, line_number: int, lines: int = 3) -> str:
         """Get context lines after the matched line."""
@@ -227,7 +242,7 @@ class PatternDetector:
             if stored_line_num > line_number and len(context_lines) < lines:
                 context_lines.append(stored_line)
 
-        return '\n'.join(context_lines)
+        return "\n".join(context_lines)
 
     def _create_detection_event(self, result: DetectionResult) -> LimitDetectionEvent:
         """Create a LimitDetectionEvent from detection result."""
@@ -239,7 +254,7 @@ class PatternDetector:
             line_number=result.line_number,
             confidence=result.confidence,
             context_before=result.context_before,
-            context_after=result.context_after
+            context_after=result.context_after,
         )
 
     def process_chunk(self, chunk: str) -> Optional[LimitDetectionEvent]:
@@ -253,14 +268,14 @@ class PatternDetector:
             LimitDetectionEvent if limit detected in chunk
         """
         # For streaming, we need to handle partial lines
-        if not hasattr(self, '_partial_line'):
+        if not hasattr(self, "_partial_line"):
             self._partial_line = ""
 
         self._partial_line += chunk
 
         # Process complete lines
-        while '\n' in self._partial_line:
-            line, self._partial_line = self._partial_line.split('\n', 1)
+        while "\n" in self._partial_line:
+            line, self._partial_line = self._partial_line.split("\n", 1)
             detection = self.detect_limit_message(line)
             if detection:
                 return detection
@@ -268,7 +283,9 @@ class PatternDetector:
         # Check if partial line might contain a pattern (for immediate detection)
         if len(self._partial_line) > 20:  # Only check substantial partial lines
             temp_detection = self.detect_limit_message(self._partial_line)
-            if temp_detection and temp_detection.confidence > 0.8:  # High confidence only
+            if (
+                temp_detection and temp_detection.confidence > 0.8
+            ):  # High confidence only
                 self._partial_line = ""  # Clear to avoid duplicate detection
                 return temp_detection
 
@@ -323,7 +340,9 @@ class PatternDetector:
                 return True
             return False
 
-    def get_detection_history(self, limit: Optional[int] = None) -> List[LimitDetectionEvent]:
+    def get_detection_history(
+        self, limit: Optional[int] = None
+    ) -> List[LimitDetectionEvent]:
         """
         Get detection history.
 
@@ -348,7 +367,8 @@ class PatternDetector:
         with self._lock:
             avg_processing_time = (
                 self.total_processing_time / max(1, self.detection_count)
-                if self.detection_count > 0 else 0.0
+                if self.detection_count > 0
+                else 0.0
             )
 
             return {
@@ -356,9 +376,14 @@ class PatternDetector:
                 "patterns_count": len(self.detection_patterns),
                 "lines_processed": self.line_number,
                 "average_processing_time_ms": avg_processing_time * 1000,
-                "last_detection": self.last_detection_time.isoformat() if self.last_detection_time else None,
+                "last_detection": (
+                    self.last_detection_time.isoformat()
+                    if self.last_detection_time
+                    else None
+                ),
                 "buffer_size": len(self.output_buffer),
-                "detection_rate": len(self.detection_history) / max(1, self.line_number)
+                "detection_rate": len(self.detection_history)
+                / max(1, self.line_number),
             }
 
     def test_pattern(self, pattern: str, test_text: str) -> DetectionResult:
@@ -378,13 +403,15 @@ class PatternDetector:
             match = compiled_pattern.search(test_text)
 
             if match:
-                confidence = self._calculate_confidence(pattern, match.group(), test_text, 0)
+                confidence = self._calculate_confidence(
+                    pattern, match.group(), test_text, 0
+                )
                 return DetectionResult(
                     matched=True,
                     pattern=pattern,
                     matched_text=match.group(),
                     confidence=confidence,
-                    line_number=1
+                    line_number=1,
                 )
             else:
                 return DetectionResult(matched=False)

@@ -1,4 +1,5 @@
 """Config command for configuration management."""
+
 import click
 import json
 import sys
@@ -19,9 +20,7 @@ def config(ctx):
 
 
 @config.command()
-@click.option('--json', 'output_json',
-              is_flag=True,
-              help='Output in JSON format')
+@click.option("--json", "output_json", is_flag=True, help="Output in JSON format")
 @click.pass_context
 def show(ctx, output_json: bool):
     """Display current configuration."""
@@ -61,8 +60,8 @@ def show(ctx, output_json: bool):
 
 
 @config.command()
-@click.argument('key')
-@click.argument('value')
+@click.argument("key")
+@click.argument("value")
 @click.pass_context
 def set(ctx, key: str, value: str):
     """Set a configuration value.
@@ -79,17 +78,15 @@ def set(ctx, key: str, value: str):
         parsed_value = _parse_config_value(key, value)
 
         # Determine section and setting
-        if '.' in key:
-            section, setting = key.split('.', 1)
+        if "." in key:
+            section, setting = key.split(".", 1)
         else:
             section = None
             setting = key
 
         # Update configuration
         success = cli_ctx.config_manager.update_config_setting(
-            section or 'root',
-            setting,
-            parsed_value
+            section or "root", setting, parsed_value
         )
 
         if success:
@@ -99,7 +96,9 @@ def set(ctx, key: str, value: str):
             # Reload controller configuration
             cli_ctx.controller.reload_config()
         else:
-            click.echo(f"Error: Failed to update configuration setting: {key}", err=True)
+            click.echo(
+                f"Error: Failed to update configuration setting: {key}", err=True
+            )
             sys.exit(1)
 
     except ValueError as e:
@@ -111,16 +110,16 @@ def set(ctx, key: str, value: str):
 
 
 @config.command()
-@click.option('--confirm',
-              is_flag=True,
-              help='Confirm reset without prompt')
+@click.option("--confirm", is_flag=True, help="Confirm reset without prompt")
 @click.pass_context
 def reset(ctx, confirm: bool):
     """Reset configuration to defaults."""
     cli_ctx = ctx.find_root().obj
 
-    if not confirm and not cli_ctx.quiet and not getattr(cli_ctx, 'test_mode', False):
-        if not click.confirm("This will reset all configuration to defaults. Continue?"):
+    if not confirm and not cli_ctx.quiet and not getattr(cli_ctx, "test_mode", False):
+        if not click.confirm(
+            "This will reset all configuration to defaults. Continue?"
+        ):
             click.echo("Reset cancelled")
             return
 
@@ -138,9 +137,7 @@ def reset(ctx, confirm: bool):
 
 
 @config.command()
-@click.option('--file',
-              type=click.Path(),
-              help='Validate specific configuration file')
+@click.option("--file", type=click.Path(), help="Validate specific configuration file")
 @click.pass_context
 def validate(ctx, file: str):
     """Validate configuration."""
@@ -183,9 +180,7 @@ def validate(ctx, file: str):
 
 
 @config.command()
-@click.option('--output',
-              type=click.Path(),
-              help='Output file path')
+@click.option("--output", type=click.Path(), help="Output file path")
 @click.pass_context
 def export(ctx, output: str):
     """Export current configuration to file."""
@@ -211,7 +206,7 @@ def export(ctx, output: str):
 
 
 @config.command()
-@click.argument('file', type=click.Path(exists=True))
+@click.argument("file", type=click.Path(exists=True))
 @click.pass_context
 def load(ctx, file: str):
     """Load configuration from file."""
@@ -233,20 +228,20 @@ def load(ctx, file: str):
 def _parse_config_value(key: str, value: str):
     """Parse configuration value based on key type."""
     # Handle JSON values
-    if value.startswith('[') or value.startswith('{'):
+    if value.startswith("[") or value.startswith("{"):
         try:
             return json.loads(value)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON: {e}")
 
     # Handle boolean values
-    if value.lower() in ('true', 'false'):
-        return value.lower() == 'true'
+    if value.lower() in ("true", "false"):
+        return value.lower() == "true"
 
     # Handle numeric values
-    if key.endswith(('_mb', '_count', '_seconds', '_hours', '_percent')):
+    if key.endswith(("_mb", "_count", "_seconds", "_hours", "_percent")):
         try:
-            if '.' in value:
+            if "." in value:
                 return float(value)
             else:
                 return int(value)
@@ -254,8 +249,8 @@ def _parse_config_value(key: str, value: str):
             raise ValueError(f"Expected numeric value for {key}")
 
     # Handle log level
-    if key == 'log_level':
-        valid_levels = ['DEBUG', 'INFO', 'WARN', 'ERROR']
+    if key == "log_level":
+        valid_levels = ["DEBUG", "INFO", "WARN", "ERROR"]
         if value.upper() not in valid_levels:
             raise ValueError(f"Invalid log level. Must be one of: {valid_levels}")
         return value.upper()

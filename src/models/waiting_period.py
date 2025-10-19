@@ -3,6 +3,7 @@
 Represents an active 5-hour countdown period, including start time,
 remaining duration, and completion callback information.
 """
+
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, Callable, List
@@ -12,6 +13,7 @@ from enum import Enum
 
 class PeriodStatus(str, Enum):
     """Possible states of a waiting period."""
+
     PENDING = "pending"
     ACTIVE = "active"
     COMPLETED = "completed"
@@ -41,16 +43,17 @@ class WaitingPeriod(BaseModel):
 
     # Display and notification settings
     show_progress: bool = Field(default=True)
-    notification_intervals: list = Field(default_factory=lambda: [0.5, 0.25, 0.1])  # Fractions remaining
+    notification_intervals: list = Field(
+        default_factory=lambda: [0.5, 0.25, 0.1]
+    )  # Fractions remaining
 
     class Config:
         """Pydantic configuration."""
-        use_enum_values = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
-    @validator('duration_hours')
+        use_enum_values = True
+        json_encoders = {datetime: lambda v: v.isoformat()}
+
+    @validator("duration_hours")
     def validate_duration(cls, v):
         """Validate duration is reasonable."""
         if v <= 0:
@@ -59,14 +62,14 @@ class WaitingPeriod(BaseModel):
             raise ValueError("Duration cannot exceed 24 hours")
         return v
 
-    @validator('check_interval_seconds')
+    @validator("check_interval_seconds")
     def validate_check_interval(cls, v):
         """Validate check interval is reasonable."""
         if not 1 <= v <= 3600:  # 1 second to 1 hour
             raise ValueError("Check interval must be between 1 and 3600 seconds")
         return v
 
-    @validator('notification_intervals')
+    @validator("notification_intervals")
     def validate_notification_intervals(cls, v):
         """Validate notification intervals are valid fractions."""
         if not v:
@@ -74,7 +77,9 @@ class WaitingPeriod(BaseModel):
 
         for interval in v:
             if not isinstance(interval, (int, float)) or not 0 < interval <= 1:
-                raise ValueError("Notification intervals must be fractions between 0 and 1")
+                raise ValueError(
+                    "Notification intervals must be fractions between 0 and 1"
+                )
 
         # Sort in descending order
         return sorted(v, reverse=True)
@@ -247,7 +252,10 @@ class WaitingPeriod(BaseModel):
                     return True
 
                 time_since_notification = datetime.now() - last_notification_time
-                if time_since_notification.total_seconds() >= self.check_interval_seconds:
+                if (
+                    time_since_notification.total_seconds()
+                    >= self.check_interval_seconds
+                ):
                     return True
 
         return False
@@ -262,7 +270,9 @@ class WaitingPeriod(BaseModel):
             "status": self.status.value,
             "associated_event_id": self.associated_event_id,
             "session_id": self.session_id,
-            "last_check_time": self.last_check_time.isoformat() if self.last_check_time else None,
+            "last_check_time": (
+                self.last_check_time.isoformat() if self.last_check_time else None
+            ),
             "check_interval_seconds": self.check_interval_seconds,
             "auto_complete": self.auto_complete,
             "completion_callback_data": self.completion_callback_data,
@@ -271,7 +281,7 @@ class WaitingPeriod(BaseModel):
             "remaining_seconds": self.get_remaining_seconds(),
             "progress": self.get_progress(),
             "formatted_remaining": self.format_remaining_time(),
-            "is_expired": self.is_expired()
+            "is_expired": self.is_expired(),
         }
 
     @classmethod
@@ -284,7 +294,12 @@ class WaitingPeriod(BaseModel):
                 data[field] = datetime.fromisoformat(data[field])
 
         # Remove computed fields
-        computed_fields = ["remaining_seconds", "progress", "formatted_remaining", "is_expired"]
+        computed_fields = [
+            "remaining_seconds",
+            "progress",
+            "formatted_remaining",
+            "is_expired",
+        ]
         for field in computed_fields:
             data.pop(field, None)
 

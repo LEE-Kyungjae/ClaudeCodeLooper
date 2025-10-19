@@ -5,13 +5,13 @@ from .logging import (
     get_logger,
     configure_default_logger,
     get_default_logger,
-    ContextLogger
+    ContextLogger,
 )
 
 __all__ = [
-    'StructuredLogger',
-    'get_logger',
-    'configure_default_logger',
-    'get_default_logger',
-    'ContextLogger'
+    "StructuredLogger",
+    "get_logger",
+    "configure_default_logger",
+    "get_default_logger",
+    "ContextLogger",
 ]

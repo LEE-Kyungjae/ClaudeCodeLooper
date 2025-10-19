@@ -3,6 +3,7 @@
 Represents a detected usage limit notification, including detection timestamp,
 matched pattern, and subsequent actions taken.
 """
+
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
@@ -37,18 +38,17 @@ class LimitDetectionEvent(BaseModel):
 
     class Config:
         """Pydantic configuration."""
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
-    @validator('matched_pattern', 'matched_text')
+        json_encoders = {datetime: lambda v: v.isoformat()}
+
+    @validator("matched_pattern", "matched_text")
     def validate_non_empty_strings(cls, v):
         """Ensure required strings are not empty."""
         if not v or not v.strip():
             raise ValueError("Pattern and text cannot be empty")
         return v.strip()
 
-    @validator('session_id', pre=True, always=True)
+    @validator("session_id", pre=True, always=True)
     def validate_session_id(cls, v):
         """Allow session_id to be assigned lazily."""
         if v is None:
@@ -56,7 +56,7 @@ class LimitDetectionEvent(BaseModel):
         v = str(v).strip()
         return v or None
 
-    @validator('cooldown_duration_hours')
+    @validator("cooldown_duration_hours")
     def validate_duration(cls, v):
         """Validate cooldown duration is reasonable."""
         if v <= 0:
@@ -65,18 +65,18 @@ class LimitDetectionEvent(BaseModel):
             raise ValueError("Cooldown duration cannot exceed 24 hours")
         return v
 
-    @validator('confidence')
+    @validator("confidence")
     def validate_confidence(cls, v):
         """Ensure confidence is between 0 and 1."""
         if not 0.0 <= v <= 1.0:
             raise ValueError("Confidence must be between 0.0 and 1.0")
         return v
 
-    @validator('cooldown_end')
+    @validator("cooldown_end")
     def validate_cooldown_end(cls, v, values):
         """Validate cooldown end time is after start time."""
-        if v is not None and 'cooldown_start' in values:
-            cooldown_start = values['cooldown_start']
+        if v is not None and "cooldown_start" in values:
+            cooldown_start = values["cooldown_start"]
             if cooldown_start is not None and v <= cooldown_start:
                 raise ValueError("Cooldown end must be after start")
         return v
@@ -87,7 +87,9 @@ class LimitDetectionEvent(BaseModel):
             raise ValueError("Cooldown has already been started")
 
         self.cooldown_start = datetime.now()
-        self.cooldown_end = self.cooldown_start + timedelta(hours=self.cooldown_duration_hours)
+        self.cooldown_end = self.cooldown_start + timedelta(
+            hours=self.cooldown_duration_hours
+        )
 
     def is_cooldown_active(self) -> bool:
         """Check if cooldown period is currently active."""
@@ -168,8 +170,12 @@ class LimitDetectionEvent(BaseModel):
             "matched_pattern": self.matched_pattern,
             "matched_text": self.matched_text,
             "session_id": self.session_id,
-            "cooldown_start": self.cooldown_start.isoformat() if self.cooldown_start else None,
-            "cooldown_end": self.cooldown_end.isoformat() if self.cooldown_end else None,
+            "cooldown_start": (
+                self.cooldown_start.isoformat() if self.cooldown_start else None
+            ),
+            "cooldown_end": (
+                self.cooldown_end.isoformat() if self.cooldown_end else None
+            ),
             "cooldown_duration_hours": self.cooldown_duration_hours,
             "line_number": self.line_number,
             "confidence": self.confidence,
@@ -181,7 +187,7 @@ class LimitDetectionEvent(BaseModel):
             "error_message": self.error_message,
             "is_cooldown_active": self.is_cooldown_active(),
             "remaining_cooldown_seconds": self.get_remaining_cooldown_seconds(),
-            "cooldown_progress": self.get_cooldown_progress()
+            "cooldown_progress": self.get_cooldown_progress(),
         }
 
     @classmethod
@@ -194,7 +200,11 @@ class LimitDetectionEvent(BaseModel):
                 data[field] = datetime.fromisoformat(data[field])
 
         # Remove computed fields
-        computed_fields = ["is_cooldown_active", "remaining_cooldown_seconds", "cooldown_progress"]
+        computed_fields = [
+            "is_cooldown_active",
+            "remaining_cooldown_seconds",
+            "cooldown_progress",
+        ]
         for field in computed_fields:
             data.pop(field, None)
 
