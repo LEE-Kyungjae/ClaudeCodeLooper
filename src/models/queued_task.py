@@ -3,6 +3,7 @@
 Represents a pending task that should be executed when Claude Code
 resumes after hitting the usage limit cooldown.
 """
+
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 import uuid
@@ -24,9 +25,8 @@ class QueuedTask(BaseModel):
 
     class Config:
         """Pydantic configuration."""
-        json_encoders = {
-            datetime: lambda value: value.isoformat()
-        }
+
+        json_encoders = {datetime: lambda value: value.isoformat()}
 
     def to_dict(self) -> Dict[str, Any]:
         """Return JSON-serializable representation."""

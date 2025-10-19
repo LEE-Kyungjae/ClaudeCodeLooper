@@ -1,4 +1,5 @@
 """Template manager for queued task automation prompts."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -46,17 +47,14 @@ class TemplateManager:
             quality_guidelines=[
                 "변경 전후에 영향 받는 서비스/엔드포인트를 나열합니다.",
                 "성능이나 비용 영향이 있다면 수치나 추정치로 설명합니다.",
-                "에러 로깅/모니터링 포인트가 필요한지 평가합니다."
+                "에러 로깅/모니터링 포인트가 필요한지 평가합니다.",
             ],
             coding_guidelines=[
                 "도메인 서비스 레이어 패턴을 유지합니다.",
                 "의존성 주입을 활용하고 전역 상태에 의존하지 않습니다.",
-                "비동기 로직은 타임아웃과 cancellation을 고려합니다."
+                "비동기 로직은 타임아웃과 cancellation을 고려합니다.",
             ],
-            post_commands=[
-                "pytest tests/ -k backend",
-                "mypy src/"
-            ]
+            post_commands=["pytest tests/ -k backend", "mypy src/"],
         ),
         "devops_incident": TaskTemplate(
             template_id="devops_incident",
@@ -68,17 +66,17 @@ class TemplateManager:
             quality_guidelines=[
                 "배포 전후 health check 또는 모니터링 지표를 확인합니다.",
                 "당시 발생한 경보/로그를 수집하여 타임라인을 작성합니다.",
-                "추가 모니터링/알림 개선 사항을 제안합니다."
+                "추가 모니터링/알림 개선 사항을 제안합니다.",
             ],
             coding_guidelines=[
                 "IaC 혹은 설정 변경은 버전 관리되는 위치를 명시합니다.",
                 "비밀정보는 마스킹하고 공유 채널에 노출하지 않습니다.",
-                "운영 명령은 dry-run 여부와 예상 영향을 함께 작성합니다."
+                "운영 명령은 dry-run 여부와 예상 영향을 함께 작성합니다.",
             ],
             post_commands=[
                 "kubectl get pods -n production",
-                "kubectl describe deployment <SERVICE> -n production"
-            ]
+                "kubectl describe deployment <SERVICE> -n production",
+            ],
         ),
         "frontend_polish": TaskTemplate(
             template_id="frontend_polish",
@@ -90,17 +88,14 @@ class TemplateManager:
             quality_guidelines=[
                 "접근성(A11y) 체크리스트(WAI-ARIA, 대체 텍스트 등)를 검토합니다.",
                 "핵심 브라우저/디바이스 조합에서 테스트합니다.",
-                "성능(번들 사이즈, hydration 시간)에 영향이 있는지 평가합니다."
+                "성능(번들 사이즈, hydration 시간)에 영향이 있는지 평가합니다.",
             ],
             coding_guidelines=[
                 "컴포넌트는 상태/스타일/비즈니스 로직을 분리합니다.",
                 "스토리북 혹은 캡쳐 기반으로 변경 사항을 공유합니다.",
-                "i18n/다국어 문자열 처리를 누락하지 않습니다."
+                "i18n/다국어 문자열 처리를 누락하지 않습니다.",
             ],
-            post_commands=[
-                "npm run lint",
-                "npm run test -- --watch=false"
-            ]
+            post_commands=["npm run lint", "npm run test -- --watch=false"],
         ),
     }
 

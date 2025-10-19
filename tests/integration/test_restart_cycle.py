@@ -9,6 +9,7 @@ This test validates the full end-to-end restart workflow:
 
 This test MUST FAIL initially before implementation.
 """
+
 import json
 import time
 import pytest
@@ -29,8 +30,8 @@ class TestCompleteRestartCycle:
             "max_log_size_mb": 10,
             "monitoring": {
                 "check_interval": 0.1,  # Fast for testing
-                "task_timeout": 5
-            }
+                "task_timeout": 5,
+            },
         }
 
     def teardown_method(self):
@@ -57,7 +58,7 @@ class TestCompleteRestartCycle:
         session = controller.start_monitoring(
             claude_cmd="echo 'test process'",
             work_dir="/tmp",
-            restart_commands=["echo 'restart'"]
+            restart_commands=["echo 'restart'"],
         )
 
         assert session.status == "active"
@@ -73,8 +74,10 @@ class TestCompleteRestartCycle:
         assert controller.waiting_period.status == "active"
 
         # 5. Fast-forward time simulation (mock the 5-hour wait)
-        with patch('src.services.timing_manager.datetime') as mock_datetime:
-            mock_datetime.now.return_value = datetime.now() + timedelta(hours=5, minutes=1)
+        with patch("src.services.timing_manager.datetime") as mock_datetime:
+            mock_datetime.now.return_value = datetime.now() + timedelta(
+                hours=5, minutes=1
+            )
             controller.timing_manager.check_waiting_period()
 
         # 6. Verify restart occurs
@@ -97,8 +100,7 @@ class TestCompleteRestartCycle:
 
         # Start monitoring
         session = controller.start_monitoring(
-            claude_cmd="echo 'ongoing task'",
-            work_dir="/tmp"
+            claude_cmd="echo 'ongoing task'", work_dir="/tmp"
         )
 
         # Simulate ongoing task
@@ -132,12 +134,11 @@ class TestCompleteRestartCycle:
         custom_commands = [
             "echo 'custom restart'",
             "--project /my-project",
-            "--task continue"
+            "--task continue",
         ]
 
         session = controller.start_monitoring(
-            claude_cmd="echo 'test'",
-            restart_commands=custom_commands
+            claude_cmd="echo 'test'", restart_commands=custom_commands
         )
 
         # Verify custom commands are stored
@@ -230,8 +231,10 @@ class TestCompleteRestartCycle:
         assert detection_time < 1.0, f"Detection took {detection_time}s, should be < 1s"
 
         # Test restart responsiveness
-        with patch('src.services.timing_manager.datetime') as mock_datetime:
-            mock_datetime.now.return_value = datetime.now() + timedelta(hours=5, minutes=1)
+        with patch("src.services.timing_manager.datetime") as mock_datetime:
+            mock_datetime.now.return_value = datetime.now() + timedelta(
+                hours=5, minutes=1
+            )
 
             start_time = time.time()
             controller.timing_manager.check_waiting_period()
@@ -265,6 +268,9 @@ class TestCompleteRestartCycle:
         time.sleep(0.2)
 
         # Should attempt restart or handle gracefully
-        assert session.status in ["stopped", "active"]  # Either restart or graceful stop
+        assert session.status in [
+            "stopped",
+            "active",
+        ]  # Either restart or graceful stop
 
         controller.stop_monitoring()

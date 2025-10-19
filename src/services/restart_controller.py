@@ -3,6 +3,7 @@
 Main orchestration service that coordinates all components for the
 automated Claude Code restart system.
 """
+
 import time
 import threading
 from datetime import datetime, timedelta
@@ -28,6 +29,7 @@ from .task_queue import TaskQueueManager
 
 class ControllerState(Enum):
     """Controller states."""
+
     INACTIVE = "inactive"
     STARTING = "starting"
     MONITORING = "monitoring"
@@ -41,6 +43,7 @@ class ControllerState(Enum):
 @dataclass
 class SystemStatus:
     """Overall system status."""
+
     state: ControllerState
     active_sessions: int
     waiting_periods: int
@@ -92,7 +95,7 @@ class RestartController:
             "waiting_started": [],
             "restart_initiated": [],
             "restart_completed": [],
-            "error_occurred": []
+            "error_occurred": [],
         }
 
     def start_monitoring(
@@ -100,7 +103,7 @@ class RestartController:
         claude_cmd: str,
         work_dir: Optional[str] = None,
         restart_commands: Optional[List[str]] = None,
-        session_id: Optional[str] = None
+        session_id: Optional[str] = None,
     ) -> MonitoringSession:
         """
         Start monitoring a Claude Code process.
@@ -123,7 +126,7 @@ class RestartController:
                 session_kwargs = {
                     "claude_command": claude_cmd,
                     "working_directory": work_dir,
-                    "restart_commands": restart_commands or []
+                    "restart_commands": restart_commands or [],
                 }
                 if session_id:
                     session_kwargs["session_id"] = session_id
@@ -140,9 +143,7 @@ class RestartController:
 
                 # Start process monitoring
                 process_info = self.process_monitor.start_monitoring(
-                    command=claude_cmd,
-                    session_id=session.session_id,
-                    work_dir=work_dir
+                    command=claude_cmd, session_id=session.session_id, work_dir=work_dir
                 )
 
                 # Update session with process info
@@ -170,7 +171,9 @@ class RestartController:
 
             except Exception as e:
                 self.state = ControllerState.ERROR
-                self._trigger_event("error_occurred", {"error": str(e), "context": "start_monitoring"})
+                self._trigger_event(
+                    "error_occurred", {"error": str(e), "context": "start_monitoring"}
+                )
                 raise RuntimeError(f"Failed to start monitoring: {e}")
 
     def add_task_to_queue(
@@ -235,7 +238,9 @@ class RestartController:
                     return self._stop_all_sessions()
 
             except Exception as e:
-                self._trigger_event("error_occurred", {"error": str(e), "context": "stop_monitoring"})
+                self._trigger_event(
+                    "error_occurred", {"error": str(e), "context": "stop_monitoring"}
+                )
                 return False
 
     def _stop_single_session(self, session_id: str) -> bool:
@@ -255,7 +260,8 @@ class RestartController:
 
         # Cancel any waiting periods
         waiting_periods_to_cancel = [
-            period_id for period_id, period in self.waiting_periods.items()
+            period_id
+            for period_id, period in self.waiting_periods.items()
             if period.session_id == session_id
         ]
 
@@ -295,7 +301,9 @@ class RestartController:
 
         self.running = True
         self._shutdown_event.clear()
-        self.controller_thread = threading.Thread(target=self._controller_loop, daemon=True)
+        self.controller_thread = threading.Thread(
+            target=self._controller_loop, daemon=True
+        )
         self.controller_thread.start()
 
     def _stop_controller(self) -> None:
@@ -331,7 +339,9 @@ class RestartController:
 
             except Exception as e:
                 self.error_count += 1
-                self._trigger_event("error_occurred", {"error": str(e), "context": "controller_loop"})
+                self._trigger_event(
+                    "error_occurred", {"error": str(e), "context": "controller_loop"}
+                )
                 time.sleep(1)  # Prevent tight error loops
 
     def _check_for_limit_detections(self) -> None:
@@ -352,7 +362,9 @@ class RestartController:
                     self._handle_limit_detection(session, detection_event)
                     break  # Only process one detection per check
 
-    def _handle_limit_detection(self, session: MonitoringSession, event: LimitDetectionEvent) -> None:
+    def _handle_limit_detection(
+        self, session: MonitoringSession, event: LimitDetectionEvent
+    ) -> None:
         """Handle a detected usage limit."""
         with self._lock:
             # Check if task is in progress
@@ -368,13 +380,13 @@ class RestartController:
             waiting_period = self.timing_manager.add_waiting_period(
                 duration_hours=event.cooldown_duration_hours,
                 session_id=session.session_id,
-                event_id=event.event_id
+                event_id=event.event_id,
             )
 
             # Set completion callback
             self.timing_manager.set_completion_callback(
                 waiting_period.period_id,
-                lambda period: self._handle_waiting_completion(period)
+                lambda period: self._handle_waiting_completion(period),
             )
 
             # Update session state
@@ -392,11 +404,14 @@ class RestartController:
             self._save_current_state()
 
             # Trigger event
-            self._trigger_event("limit_detected", {
-                "session_id": session.session_id,
-                "event": event,
-                "waiting_period": waiting_period
-            })
+            self._trigger_event(
+                "limit_detected",
+                {
+                    "session_id": session.session_id,
+                    "event": event,
+                    "waiting_period": waiting_period,
+                },
+            )
 
     def _check_waiting_periods(self) -> None:
         """Check all waiting periods for completion."""
@@ -428,19 +443,27 @@ class RestartController:
         with self._lock:
             try:
                 self.state = ControllerState.RESTARTING
-                self._trigger_event("restart_initiated", {"session_id": session.session_id})
+                self._trigger_event(
+                    "restart_initiated", {"session_id": session.session_id}
+                )
 
                 # Stop current process
                 self.process_monitor.stop_monitoring(session.session_id)
 
                 # Build restart command
-                restart_config = session.restart_config.clone() if session.restart_config else RestartCommandConfiguration.create_default(session.claude_command)
+                restart_config = (
+                    session.restart_config.clone()
+                    if session.restart_config
+                    else RestartCommandConfiguration.create_default(
+                        session.claude_command
+                    )
+                )
 
                 # Start new process
                 process_info = self.process_monitor.start_monitoring(
                     command=" ".join(restart_config.build_full_command()),
                     session_id=session.session_id,
-                    work_dir=session.working_directory
+                    work_dir=session.working_directory,
                 )
 
                 # Update session
@@ -466,16 +489,21 @@ class RestartController:
                 self._save_current_state()
 
                 # Trigger event
-                self._trigger_event("restart_completed", {"session_id": session.session_id})
+                self._trigger_event(
+                    "restart_completed", {"session_id": session.session_id}
+                )
 
             except Exception as e:
                 self.state = ControllerState.ERROR
                 session.record_error(f"Restart failed: {e}")
-                self._trigger_event("error_occurred", {
-                    "error": str(e),
-                    "context": "restart",
-                    "session_id": session.session_id
-                })
+                self._trigger_event(
+                    "error_occurred",
+                    {
+                        "error": str(e),
+                        "context": "restart",
+                        "session_id": session.session_id,
+                    },
+                )
 
     def _execute_task_queue(self, session: MonitoringSession) -> None:
         """Dispatch queued tasks to the restarted session."""
@@ -517,11 +545,14 @@ class RestartController:
             # Requeue tasks that were not sent successfully (including the failed one)
             remaining = queued_tasks[failed_index:]
             self.task_queue.prepend(remaining)
-            self._trigger_event("error_occurred", {
-                "error": "Failed to dispatch queued tasks to Claude Code",
-                "context": "task_queue_dispatch",
-                "session_id": session.session_id
-            })
+            self._trigger_event(
+                "error_occurred",
+                {
+                    "error": "Failed to dispatch queued tasks to Claude Code",
+                    "context": "task_queue_dispatch",
+                    "session_id": session.session_id,
+                },
+            )
 
     def _check_task_completions(self) -> None:
         """Check task completion monitors."""
@@ -553,7 +584,7 @@ class RestartController:
                 total_detections=len(self.detection_events),
                 uptime_seconds=uptime,
                 last_activity=self.last_activity,
-                error_message=None
+                error_message=None,
             )
 
     @property
@@ -582,7 +613,7 @@ class RestartController:
             f"Waiting periods: {len(self.waiting_periods)}",
             f"Total detections: {len(self.detection_events)}",
             f"Restart count: {self.restart_count}",
-            f"Error count: {self.error_count}"
+            f"Error count: {self.error_count}",
         ]
 
     def reload_config(self, config_file: Optional[str] = None) -> bool:
@@ -596,7 +627,9 @@ class RestartController:
 
             return True
         except Exception as e:
-            self._trigger_event("error_occurred", {"error": str(e), "context": "reload_config"})
+            self._trigger_event(
+                "error_occurred", {"error": str(e), "context": "reload_config"}
+            )
             return False
 
     def add_event_callback(self, event_type: str, callback: Callable) -> None:
@@ -627,16 +660,24 @@ class RestartController:
         """Save current system state."""
         try:
             state_data = {
-                "sessions": {sid: session.to_dict() for sid, session in self.active_sessions.items()},
-                "waiting_periods": {pid: period.to_dict() for pid, period in self.waiting_periods.items()},
-                "detection_events": [event.to_dict() for event in self.detection_events[-100:]],  # Keep last 100
+                "sessions": {
+                    sid: session.to_dict()
+                    for sid, session in self.active_sessions.items()
+                },
+                "waiting_periods": {
+                    pid: period.to_dict()
+                    for pid, period in self.waiting_periods.items()
+                },
+                "detection_events": [
+                    event.to_dict() for event in self.detection_events[-100:]
+                ],  # Keep last 100
                 "statistics": {
                     "start_time": self.start_time.isoformat(),
                     "restart_count": self.restart_count,
                     "error_count": self.error_count,
-                    "state": self.state.value
+                    "state": self.state.value,
                 },
-                "task_queue": self.task_queue.to_serializable()
+                "task_queue": self.task_queue.to_serializable(),
             }
 
             self.state_manager.save_state(state_data)

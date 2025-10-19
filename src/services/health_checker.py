@@ -3,6 +3,7 @@
 Provides real-time health metrics and status monitoring for running processes
 including CPU usage, memory consumption, and process state tracking.
 """
+
 import time
 import psutil
 import threading
@@ -17,6 +18,7 @@ from ..exceptions import ProcessHealthError
 
 class ProcessState(Enum):
     """Process monitoring states."""
+
     UNKNOWN = "unknown"
     STARTING = "starting"
     RUNNING = "running"
@@ -29,6 +31,7 @@ class ProcessState(Enum):
 @dataclass
 class ProcessInfo:
     """Information about a monitored process."""
+
     pid: int
     session_id: str
     command: str
@@ -42,6 +45,7 @@ class ProcessInfo:
 @dataclass
 class HealthMetrics:
     """Process health metrics."""
+
     cpu_percent: float
     memory_usage: float
     memory_mb: float
@@ -79,7 +83,7 @@ class HealthChecker:
         session_id: str,
         pid: int,
         command: str,
-        start_time: Optional[datetime] = None
+        start_time: Optional[datetime] = None,
     ) -> ProcessInfo:
         """Register a process for health monitoring.
 
@@ -104,7 +108,7 @@ class HealthChecker:
                 session_id=session_id,
                 command=command,
                 start_time=start_time or datetime.now(),
-                status=ProcessState.STARTING
+                status=ProcessState.STARTING,
             )
 
             self.monitored_processes[session_id] = process_info
@@ -170,12 +174,14 @@ class HealthChecker:
 
             return HealthMetrics(
                 cpu_percent=cpu_percent,
-                memory_usage=memory_info.percent if hasattr(memory_info, 'percent') else 0.0,
+                memory_usage=(
+                    memory_info.percent if hasattr(memory_info, "percent") else 0.0
+                ),
                 memory_mb=memory_mb,
                 status=process.status(),
                 open_files=open_files,
                 thread_count=thread_count,
-                uptime_seconds=uptime
+                uptime_seconds=uptime,
             )
 
         except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -238,9 +244,7 @@ class HealthChecker:
         self.monitoring_active = True
         self._shutdown_event.clear()
         self.monitoring_thread = threading.Thread(
-            target=self._monitoring_loop,
-            daemon=True,
-            name="HealthChecker"
+            target=self._monitoring_loop, daemon=True, name="HealthChecker"
         )
         self.monitoring_thread.start()
 

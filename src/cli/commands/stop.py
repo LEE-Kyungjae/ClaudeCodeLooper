@@ -1,17 +1,13 @@
 """Stop command for Claude Code monitoring."""
+
 import click
 import sys
 
 
 @click.command()
-@click.option('--session-id',
-              help='Specific session ID to stop')
-@click.option('--force',
-              is_flag=True,
-              help='Force stop even during waiting period')
-@click.option('--kill-claude',
-              is_flag=True,
-              help='Also terminate Claude Code process')
+@click.option("--session-id", help="Specific session ID to stop")
+@click.option("--force", is_flag=True, help="Force stop even during waiting period")
+@click.option("--kill-claude", is_flag=True, help="Also terminate Claude Code process")
 @click.pass_context
 def stop(ctx, session_id: str, force: bool, kill_claude: bool):
     """Stop monitoring and optionally terminate Claude Code.
@@ -33,7 +29,10 @@ def stop(ctx, session_id: str, force: bool, kill_claude: bool):
 
             # Check if in waiting period and not forced
             if session.is_waiting() and not force:
-                click.echo("Session is in waiting period. Use --force to stop anyway.", err=True)
+                click.echo(
+                    "Session is in waiting period. Use --force to stop anyway.",
+                    err=True,
+                )
                 sys.exit(4)
 
             if kill_claude:
@@ -55,12 +54,16 @@ def stop(ctx, session_id: str, force: bool, kill_claude: bool):
             system_status = cli_ctx.controller.get_system_status()
             if system_status.active_sessions == 0:
                 if not cli_ctx.quiet:
-                    click.echo("No active monitoring sessions. Monitoring already stopped.")
+                    click.echo(
+                        "No active monitoring sessions. Monitoring already stopped."
+                    )
                 return
 
             # Check for waiting periods
             if system_status.waiting_periods > 0 and not force:
-                click.echo(f"Warning: {system_status.waiting_periods} waiting period(s) active.")
+                click.echo(
+                    f"Warning: {system_status.waiting_periods} waiting period(s) active."
+                )
                 click.echo("Use --force to stop anyway.")
                 sys.exit(4)
 

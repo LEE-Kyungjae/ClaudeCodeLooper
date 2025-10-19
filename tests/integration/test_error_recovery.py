@@ -5,6 +5,7 @@ across various failure conditions.
 
 This test MUST FAIL initially before implementation.
 """
+
 import pytest
 import time
 import tempfile
@@ -23,6 +24,7 @@ class TestErrorRecoveryScenarios:
     def teardown_method(self):
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
     @pytest.mark.integration
@@ -34,13 +36,13 @@ class TestErrorRecoveryScenarios:
         config = SystemConfiguration(
             log_level="DEBUG",
             detection_patterns=["test pattern"],
-            monitoring={"check_interval": 0.1, "task_timeout": 5}
+            monitoring={"check_interval": 0.1, "task_timeout": 5},
         )
 
         controller = RestartController(config)
         session = controller.start_monitoring(
             claude_cmd="echo 'test process'",
-            restart_commands=["echo 'recovery restart'"]
+            restart_commands=["echo 'recovery restart'"],
         )
 
         # Simulate process crash
@@ -48,11 +50,16 @@ class TestErrorRecoveryScenarios:
         time.sleep(0.2)
 
         # System should detect crash and attempt restart
-        assert session.status in ["active", "stopped"]  # Either restarted or gracefully stopped
+        assert session.status in [
+            "active",
+            "stopped",
+        ]  # Either restarted or gracefully stopped
 
         # Verify recovery attempt was logged
         logs = controller.get_recent_logs()
-        assert any("crash" in log.lower() or "terminated" in log.lower() for log in logs)
+        assert any(
+            "crash" in log.lower() or "terminated" in log.lower() for log in logs
+        )
 
         controller.stop_monitoring()
 
@@ -89,7 +96,7 @@ class TestErrorRecoveryScenarios:
         config_file = os.path.join(self.temp_dir, "corrupted_config.json")
 
         # Create corrupted JSON file
-        with open(config_file, 'w') as f:
+        with open(config_file, "w") as f:
             f.write('{"invalid": json, syntax}')
 
         config_manager = ConfigManager()
@@ -102,7 +109,9 @@ class TestErrorRecoveryScenarios:
         assert len(config.detection_patterns) > 0
 
         # Should create backup of corrupted file
-        backup_files = [f for f in os.listdir(self.temp_dir) if f.startswith("corrupted_config")]
+        backup_files = [
+            f for f in os.listdir(self.temp_dir) if f.startswith("corrupted_config")
+        ]
         assert len(backup_files) >= 2  # Original + backup
 
     @pytest.mark.integration
@@ -146,7 +155,7 @@ class TestErrorRecoveryScenarios:
         )
 
         # Simulate network interruption (command fails)
-        with patch('subprocess.Popen') as mock_popen:
+        with patch("subprocess.Popen") as mock_popen:
             mock_popen.side_effect = OSError("Network unreachable")
 
             # Should handle network errors gracefully
@@ -157,7 +166,9 @@ class TestErrorRecoveryScenarios:
 
             # Should log the error and attempt recovery
             logs = controller.get_recent_logs()
-            assert any("network" in log.lower() or "unreachable" in log.lower() for log in logs)
+            assert any(
+                "network" in log.lower() or "unreachable" in log.lower() for log in logs
+            )
 
         controller.stop_monitoring()
 
@@ -193,11 +204,11 @@ class TestErrorRecoveryScenarios:
         logging_config = LoggingConfig(
             log_file=log_file,
             max_size_mb=1,  # Small size to trigger rotation
-            backup_count=3
+            backup_count=3,
         )
 
         # Fill log file to trigger rotation
-        with open(log_file, 'w') as f:
+        with open(log_file, "w") as f:
             f.write("x" * 2 * 1024 * 1024)  # 2MB
 
         # Make log directory read-only to cause rotation failure
@@ -226,17 +237,15 @@ class TestErrorRecoveryScenarios:
 
         def concurrent_save(thread_id):
             try:
-                state_manager.save_state({
-                    "thread_id": thread_id,
-                    "timestamp": time.time()
-                })
+                state_manager.save_state(
+                    {"thread_id": thread_id, "timestamp": time.time()}
+                )
             except Exception as e:
                 conflicts.append(f"Thread {thread_id}: {e}")
 
         # Start multiple threads trying to save state simultaneously
         threads = [
-            threading.Thread(target=concurrent_save, args=(i,))
-            for i in range(5)
+            threading.Thread(target=concurrent_save, args=(i,)) for i in range(5)
         ]
 
         for thread in threads:
@@ -266,7 +275,7 @@ class TestErrorRecoveryScenarios:
         try:
             # Open many files to approach system limits
             for i in range(1000):
-                f = open(os.path.join(self.temp_dir, f"file_{i}.txt"), 'w')
+                f = open(os.path.join(self.temp_dir, f"file_{i}.txt"), "w")
                 open_files.append(f)
 
             # Should handle resource constraints gracefully
@@ -299,15 +308,12 @@ class TestErrorRecoveryScenarios:
         timing_manager = TimingManager()
 
         # Start a waiting period
-        waiting_period = WaitingPeriod(
-            start_time=datetime.now(),
-            duration_hours=5
-        )
+        waiting_period = WaitingPeriod(start_time=datetime.now(), duration_hours=5)
 
         timing_manager.add_waiting_period(waiting_period)
 
         # Simulate system clock jump backward
-        with patch('src.services.timing_manager.datetime') as mock_datetime:
+        with patch("src.services.timing_manager.datetime") as mock_datetime:
             # Clock jumps back 1 hour
             mock_datetime.now.return_value = datetime.now() - timedelta(hours=1)
 
@@ -327,7 +333,7 @@ class TestErrorRecoveryScenarios:
         # Stress configuration
         config = SystemConfiguration(
             monitoring={"check_interval": 0.001},  # Very aggressive monitoring
-            max_log_size_mb=1  # Small logs to trigger frequent rotation
+            max_log_size_mb=1,  # Small logs to trigger frequent rotation
         )
 
         controller = RestartController(config)
@@ -335,9 +341,7 @@ class TestErrorRecoveryScenarios:
         # Start multiple monitoring sessions
         sessions = []
         for i in range(5):
-            session = controller.start_monitoring(
-                claude_cmd=f"echo 'stress test {i}'"
-            )
+            session = controller.start_monitoring(claude_cmd=f"echo 'stress test {i}'")
             sessions.append(session)
 
         time.sleep(1)  # Let system run under stress
