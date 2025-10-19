@@ -1,4 +1,5 @@
 """Logs command for accessing system logs."""
+
 import click
 import sys
 import os
@@ -8,22 +9,26 @@ from typing import List, Optional
 
 
 @click.command()
-@click.option('--tail',
-              type=int,
-              default=50,
-              help='Number of lines to show (default: 50)')
-@click.option('--follow',
-              is_flag=True,
-              help='Follow log output (like tail -f)')
-@click.option('--level',
-              type=click.Choice(['DEBUG', 'INFO', 'WARN', 'ERROR'], case_sensitive=False),
-              help='Filter by log level')
-@click.option('--since',
-              help='Show logs since timestamp (ISO format)')
-@click.option('--grep',
-              help='Filter logs by pattern (regex)')
+@click.option(
+    "--tail", type=int, default=50, help="Number of lines to show (default: 50)"
+)
+@click.option("--follow", is_flag=True, help="Follow log output (like tail -f)")
+@click.option(
+    "--level",
+    type=click.Choice(["DEBUG", "INFO", "WARN", "ERROR"], case_sensitive=False),
+    help="Filter by log level",
+)
+@click.option("--since", help="Show logs since timestamp (ISO format)")
+@click.option("--grep", help="Filter logs by pattern (regex)")
 @click.pass_context
-def logs(ctx, tail: int, follow: bool, level: Optional[str], since: Optional[str], grep: Optional[str]):
+def logs(
+    ctx,
+    tail: int,
+    follow: bool,
+    level: Optional[str],
+    since: Optional[str],
+    grep: Optional[str],
+):
     """Access and manage system logs.
 
     Examples:
@@ -46,7 +51,10 @@ def logs(ctx, tail: int, follow: bool, level: Optional[str], since: Optional[str
             try:
                 since_datetime = datetime.fromisoformat(since)
             except ValueError:
-                click.echo("Error: Invalid since timestamp format. Use ISO format (YYYY-MM-DDTHH:MM:SS)", err=True)
+                click.echo(
+                    "Error: Invalid since timestamp format. Use ISO format (YYYY-MM-DDTHH:MM:SS)",
+                    err=True,
+                )
                 sys.exit(1)
 
         # Compile grep pattern if provided
@@ -63,7 +71,9 @@ def logs(ctx, tail: int, follow: bool, level: Optional[str], since: Optional[str
 
         if not os.path.exists(log_file_path):
             if not cli_ctx.quiet:
-                click.echo("[INFO] No log file found. Start monitoring to generate logs.")
+                click.echo(
+                    "[INFO] No log file found. Start monitoring to generate logs."
+                )
             return
 
         if follow:
@@ -79,11 +89,16 @@ def logs(ctx, tail: int, follow: bool, level: Optional[str], since: Optional[str
         sys.exit(1)
 
 
-def _show_logs(log_file_path: str, tail: int, level: Optional[str],
-               since_datetime: Optional[datetime], grep_pattern: Optional[re.Pattern]) -> None:
+def _show_logs(
+    log_file_path: str,
+    tail: int,
+    level: Optional[str],
+    since_datetime: Optional[datetime],
+    grep_pattern: Optional[re.Pattern],
+) -> None:
     """Show logs with filtering."""
     try:
-        with open(log_file_path, 'r', encoding='utf-8') as f:
+        with open(log_file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
         # Apply filters
@@ -114,14 +129,18 @@ def _show_logs(log_file_path: str, tail: int, level: Optional[str],
         sys.exit(1)
 
 
-def _follow_logs(log_file_path: str, level: Optional[str],
-                grep_pattern: Optional[re.Pattern], verbose: bool) -> None:
+def _follow_logs(
+    log_file_path: str,
+    level: Optional[str],
+    grep_pattern: Optional[re.Pattern],
+    verbose: bool,
+) -> None:
     """Follow logs in real-time."""
     import time
 
     try:
         # Start from end of file
-        with open(log_file_path, 'r', encoding='utf-8') as f:
+        with open(log_file_path, "r", encoding="utf-8") as f:
             # Seek to end
             f.seek(0, 2)
 
@@ -145,9 +164,12 @@ def _follow_logs(log_file_path: str, level: Optional[str],
         sys.exit(1)
 
 
-def _line_matches_filters(line: str, level: Optional[str],
-                         since_datetime: Optional[datetime],
-                         grep_pattern: Optional[re.Pattern]) -> bool:
+def _line_matches_filters(
+    line: str,
+    level: Optional[str],
+    since_datetime: Optional[datetime],
+    grep_pattern: Optional[re.Pattern],
+) -> bool:
     """Check if log line matches all filters."""
     # Level filter
     if level:
@@ -173,9 +195,9 @@ def _extract_timestamp(line: str) -> Optional[datetime]:
     """Extract timestamp from log line."""
     # Common log timestamp patterns
     patterns = [
-        r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})',  # ISO format
-        r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})',  # Space separated
-        r'(\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2})',  # US format
+        r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})",  # ISO format
+        r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})",  # Space separated
+        r"(\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2})",  # US format
     ]
 
     for pattern in patterns:
@@ -184,7 +206,11 @@ def _extract_timestamp(line: str) -> Optional[datetime]:
             timestamp_str = match.group(1)
             try:
                 # Try different parsing formats
-                for fmt in ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%m/%d/%Y %H:%M:%S']:
+                for fmt in [
+                    "%Y-%m-%dT%H:%M:%S",
+                    "%Y-%m-%d %H:%M:%S",
+                    "%m/%d/%Y %H:%M:%S",
+                ]:
                     try:
                         return datetime.strptime(timestamp_str, fmt)
                     except ValueError:

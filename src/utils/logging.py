@@ -2,6 +2,7 @@
 
 Provides context-aware logging with structured data for better observability.
 """
+
 import logging
 import json
 from datetime import datetime
@@ -189,8 +190,7 @@ _default_logger: Optional[StructuredLogger] = None
 
 
 def configure_default_logger(
-    level: str = "INFO",
-    log_file: Optional[str] = None
+    level: str = "INFO", log_file: Optional[str] = None
 ) -> StructuredLogger:
     """Configure the default module logger.
 
