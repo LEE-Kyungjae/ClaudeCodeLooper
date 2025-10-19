@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-cli-reference)
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-cli-reference) • [Contributing](#-contributing)
 
 </div>
 
@@ -540,6 +540,34 @@ Bug reports, feature suggestions, and pull requests are always welcome!
 
 We built this project to make working with Claude Code easier.
 Feedback and contributions are appreciated!
+
+---
+
+## 🤝 Contributing
+
+### Branching Strategy
+
+We follow a **trunk + development** workflow:
+
+- `main` — production-ready code. Release tags (`vX.Y.Z`) are created from here and published to PyPI automatically.
+- `develop` — integration branch. All new work is merged here via pull requests before being promoted to `main`.
+- Feature branches — created from `develop` for new work: `feature/<topic>`.
+- Hotfix branches — created from `main` for urgent fixes: `hotfix/<issue>` and merged back into both `main` and `develop`.
+
+### Pull Request Guidelines
+
+1. Create a feature branch from `develop` (`feature/<name>`).
+2. Ensure linting and tests succeed (`pip install -e ".[dev]"` then `pytest`).
+3. Open a PR **into `develop`**, describe the change, and request review.
+4. Once approved and merged into `develop`, maintainers promote changes to `main` during release cycles.
+
+### Release Flow
+
+1. Update the version in `pyproject.toml` and commit on `develop`.
+2. Merge `develop` -> `main` via PR.
+3. Tag `main` with `vX.Y.Z` and push; GitHub Actions builds and publishes to PyPI automatically.
+
+Contributions, bug reports, and feature ideas are welcome! Please open an issue or submit a pull request following the guidelines above.
 
 ---
 
