@@ -98,6 +98,14 @@ def start(
                 if getattr(cli_ctx, "test_mode", False):
                     work_dir = None
                 else:
+                    parent_dir = os.path.dirname(work_dir) or os.path.sep
+                    parent_accessible = os.access(parent_dir, os.W_OK | os.X_OK)
+                    if not parent_accessible:
+                        click.echo(
+                            f"Error: No access to working directory: {work_dir}",
+                            err=True,
+                        )
+                        sys.exit(3)
                     click.echo(
                         f"Error: Working directory does not exist: {work_dir}", err=True
                     )
