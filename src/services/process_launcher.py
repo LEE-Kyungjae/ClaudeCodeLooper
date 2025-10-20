@@ -134,6 +134,9 @@ class ProcessLauncher:
             )
 
         except FileNotFoundError as e:
+            if self._should_simulate(command):
+                return self._create_simulated_process(session_id, command)
+
             raise ProcessStartError(
                 f"Command not found: {command}",
                 details={"command": command, "original_error": str(e)},
@@ -150,6 +153,9 @@ class ProcessLauncher:
             ) from e
 
         except Exception as e:
+            if self._should_simulate(command):
+                return self._create_simulated_process(session_id, command)
+
             raise ProcessStartError(
                 f"Unexpected error starting process",
                 details={"command": command, "session_id": session_id, "error": str(e)},
@@ -364,6 +370,19 @@ class ProcessLauncher:
             ]
         )
         return [python_executable, "-c", script]
+
+    def _should_simulate(self, command: Any) -> bool:
+        if not self.config.allows_process_simulation():
+            return False
+
+        allowed_commands = {"claude", "claude-cli"}
+        if isinstance(command, (list, tuple)):
+            base_cmd = str(command[0]).lower() if command else ""
+        else:
+            parts = shlex.split(command) if isinstance(command, str) else []
+            base_cmd = parts[0].lower() if parts else ""
+
+        return base_cmd in allowed_commands
 
     def _generate_fake_pid(self) -> int:
         """Generate a pseudo process ID for simulations.
