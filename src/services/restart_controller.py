@@ -6,8 +6,9 @@ automated Claude Code restart system.
 
 import time
 import threading
+from collections import deque
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Callable
+from typing import Deque, Dict, List, Optional, Any, Callable
 from dataclasses import dataclass
 from enum import Enum
 
@@ -66,14 +67,18 @@ class RestartController:
         self.pattern_detector = PatternDetector(config)
         self.timing_manager = TimingManager(config)
         self.state_manager = StateManager(config)
+        self.state_manager.on_state_loaded = self._apply_state_data
         self.config_manager = ConfigManager()
         self.task_queue = TaskQueueManager()
+        self._log_messages: Deque[str] = deque(maxlen=200)
+        self.process_monitor.add_crash_callback(self._handle_process_crash)
 
         # Data storage
         self.active_sessions: Dict[str, MonitoringSession] = {}
         self.waiting_periods: Dict[str, WaitingPeriod] = {}
         self.detection_events: List[LimitDetectionEvent] = []
         self.task_monitors: Dict[str, TaskCompletionMonitor] = {}
+        self._last_waiting_period: Optional[WaitingPeriod] = None
 
         # Thread safety
         self._lock = threading.RLock()
@@ -134,12 +139,20 @@ class RestartController:
                 session = MonitoringSession(**session_kwargs)
 
                 # Create restart configuration snapshot for the session
-                restart_config = RestartCommandConfiguration.create_default(claude_cmd)
+                restart_config = RestartCommandConfiguration.create_default(
+                    claude_cmd
+                )
                 if restart_commands:
-                    restart_config.arguments.extend(list(restart_commands))
+                    primary_command, *additional_args = restart_commands
+                    restart_config.command_template = primary_command
+                    restart_config.arguments = list(additional_args)
                 session.restart_config = restart_config
                 session.restart_config_id = restart_config.config_id
-                session.restart_commands = restart_config.arguments.copy()
+                session.restart_commands = (
+                    list(restart_commands)
+                    if restart_commands
+                    else restart_config.arguments.copy()
+                )
 
                 # Start process monitoring
                 process_info = self.process_monitor.start_monitoring(
@@ -347,7 +360,7 @@ class RestartController:
     def _check_for_limit_detections(self) -> None:
         """Check all active sessions for limit detections."""
         for session_id, session in list(self.active_sessions.items()):
-            if not session.is_active():
+            if not session.is_active() and session.status != SessionStatus.WAITING:
                 continue
 
             # Get recent output from process monitor
@@ -367,6 +380,15 @@ class RestartController:
     ) -> None:
         """Handle a detected usage limit."""
         with self._lock:
+            if session.status == SessionStatus.WAITING:
+                session.detection_count += 1
+                self.detection_events.append(event)
+                self._last_waiting_period = self.waiting_periods.get(
+                    session.waiting_period_id, self._last_waiting_period
+                )
+                self.process_monitor.clear_output(session.session_id)
+                return
+
             # Check if task is in progress
             task_monitor = self.task_monitors.get(session.session_id)
             if task_monitor and task_monitor.should_wait_for_completion():
@@ -395,6 +417,7 @@ class RestartController:
             # Store data
             self.detection_events.append(event)
             self.waiting_periods[waiting_period.period_id] = waiting_period
+            self._last_waiting_period = waiting_period
 
             # Update controller state
             self.state = ControllerState.WAITING
@@ -402,6 +425,7 @@ class RestartController:
 
             # Save state
             self._save_current_state()
+            self.process_monitor.clear_output(session.session_id)
 
             # Trigger event
             self._trigger_event(
@@ -430,6 +454,7 @@ class RestartController:
                 return
 
             session = self.active_sessions[session_id]
+            self._last_waiting_period = waiting_period
 
             # Initiate restart
             self._initiate_restart(session)
@@ -437,6 +462,28 @@ class RestartController:
             # Clean up waiting period
             if waiting_period.period_id in self.waiting_periods:
                 del self.waiting_periods[waiting_period.period_id]
+
+    def _handle_process_crash(self, session_id: str) -> None:
+        """Handle process crash events from ProcessMonitor."""
+        with self._lock:
+            session = self.active_sessions.get(session_id)
+            if not session:
+                self._log(f"Process crash detected for unknown session {session_id}")
+                return
+
+            self._log(f"Process crash detected for session {session_id}")
+
+            try:
+                session.mark_crashed()
+            except Exception:
+                pass
+
+            try:
+                self._initiate_restart(session)
+                self._log(f"Restart initiated for session {session_id}")
+            except Exception as exc:
+                session.record_error(str(exc))
+                self._log(f"Failed to restart session {session_id}: {exc}")
 
     def _initiate_restart(self, session: MonitoringSession) -> None:
         """Initiate Claude Code restart."""
@@ -446,6 +493,8 @@ class RestartController:
                 self._trigger_event(
                     "restart_initiated", {"session_id": session.session_id}
                 )
+
+                self._log(f"Restart initiated for session {session.session_id}")
 
                 # Stop current process
                 self.process_monitor.stop_monitoring(session.session_id)
@@ -467,7 +516,11 @@ class RestartController:
                 )
 
                 # Update session
-                session.resume_from_waiting()
+                if session.status == SessionStatus.WAITING:
+                    session.resume_from_waiting()
+                else:
+                    session.status = SessionStatus.ACTIVE
+                    session.last_activity = datetime.now()
                 session.claude_process_id = process_info.pid
                 session.restart_config = restart_config
                 session.restart_config_id = restart_config.config_id
@@ -504,6 +557,7 @@ class RestartController:
                         "session_id": session.session_id,
                     },
                 )
+                self._log(f"Restart failed for session {session.session_id}: {e}")
 
     def _execute_task_queue(self, session: MonitoringSession) -> None:
         """Dispatch queued tasks to the restarted session."""
@@ -572,6 +626,10 @@ class RestartController:
         with self._lock:
             return self.active_sessions.get(session_id)
 
+    def _log(self, message: str) -> None:
+        timestamp = datetime.now().isoformat(timespec="seconds")
+        self._log_messages.append(f"[{timestamp}] {message}")
+
     def get_system_status(self) -> SystemStatus:
         """Get overall system status."""
         with self._lock:
@@ -593,7 +651,7 @@ class RestartController:
         with self._lock:
             for period in self.waiting_periods.values():
                 return period
-            return None
+            return self._last_waiting_period
 
     @property
     def task_monitor(self) -> Optional[TaskCompletionMonitor]:
@@ -605,8 +663,9 @@ class RestartController:
 
     def get_recent_logs(self, lines: int = 50) -> List[str]:
         """Get recent system logs."""
-        # This would integrate with the logging system
-        # For now, return basic status information
+        if self._log_messages:
+            return list(self._log_messages)[-lines:]
+
         return [
             f"System state: {self.state.value}",
             f"Active sessions: {len(self.active_sessions)}",
@@ -647,6 +706,38 @@ class RestartController:
                 pass
         return False
 
+    def restart_claude_process(self, session_id: Optional[str] = None) -> None:
+        """Manually trigger a restart for the specified (or first) session."""
+        with self._lock:
+            if session_id:
+                session = self.active_sessions.get(session_id)
+            else:
+                session = next(iter(self.active_sessions.values()), None)
+
+            if session is None:
+                raise RuntimeError("No active monitoring session available for restart")
+
+            self._log(
+                f"Manual restart requested for session {session.session_id}"
+            )
+
+            try:
+                self._initiate_restart(session)
+            except OSError as network_error:
+                self._log(
+                    f"Network error during restart of {session.session_id}: {network_error}"
+                )
+                raise
+            except Exception as exc:
+                self._log(
+                    f"Unexpected error during restart of {session.session_id}: {exc}"
+                )
+                raise
+
+    def stop_all_monitoring(self) -> bool:
+        """Stop monitoring for every active session."""
+        return self.stop_monitoring()
+
     def _trigger_event(self, event_type: str, data: Dict[str, Any]) -> None:
         """Trigger event callbacks."""
         if event_type in self.event_callbacks:
@@ -684,50 +775,71 @@ class RestartController:
         except Exception as e:
             print(f"Error saving state: {e}")
 
-    def restore_state(self) -> bool:
+    def restore_state(self, state_data: Optional[Dict[str, Any]] = None) -> bool:
         """Restore system state from persistence."""
         try:
-            state_data = self.state_manager.load_state()
+            if state_data is None:
+                state_data = self.state_manager.load_state()
             if not state_data:
                 return False
 
-            # Restore sessions (but don't restart processes)
-            for session_id, session_data in state_data.get("sessions", {}).items():
-                session = MonitoringSession.from_dict(session_data)
-                # Mark as stopped since processes won't be running
-                session.stop_monitoring()
-                self.active_sessions[session_id] = session
-
-            # Restore waiting periods
-            for period_id, period_data in state_data.get("waiting_periods", {}).items():
-                period = WaitingPeriod.from_dict(period_data)
-                # Only restore active periods
-                if period.is_active() and not period.is_expired():
-                    self.waiting_periods[period_id] = period
-                    self.timing_manager.active_periods[period_id] = period
-
-            # Restore detection events
-            for event_data in state_data.get("detection_events", []):
-                event = LimitDetectionEvent.from_dict(event_data)
-                self.detection_events.append(event)
-
-            # Restore queued tasks
-            task_queue_data = state_data.get("task_queue", [])
-            if task_queue_data:
-                self.task_queue.load_serialized(task_queue_data)
-
-            # Restore statistics
-            stats = state_data.get("statistics", {})
-            if "restart_count" in stats:
-                self.restart_count = stats["restart_count"]
-            if "error_count" in stats:
-                self.error_count = stats["error_count"]
-
+            self._apply_state_data(state_data)
             return True
 
         except Exception as e:
             print(f"Error restoring state: {e}")
             return False
+
+    def _apply_state_data(self, state_data: Dict[str, Any]) -> None:
+        with self._lock:
+            self.active_sessions.clear()
+            self.waiting_periods.clear()
+            self.detection_events.clear()
+            self.task_monitors.clear()
+            self._last_waiting_period = None
+
+            for session_id, session_data in state_data.get("sessions", {}).items():
+                session = MonitoringSession.from_dict(session_data)
+                self.active_sessions[session_id] = session
+
+            for period_id, period_data in state_data.get("waiting_periods", {}).items():
+                period = WaitingPeriod.from_dict(period_data)
+                if period.is_active() and not period.is_expired():
+                    self.waiting_periods[period_id] = period
+                    self.timing_manager.active_periods[period_id] = period
+                    self._last_waiting_period = period
+
+            for event_data in state_data.get("detection_events", []):
+                event = LimitDetectionEvent.from_dict(event_data)
+                self.detection_events.append(event)
+
+            task_queue_data = state_data.get("task_queue", [])
+            if task_queue_data:
+                self.task_queue.load_serialized(task_queue_data)
+
+            stats = state_data.get("statistics", {})
+            self.restart_count = stats.get("restart_count", self.restart_count)
+            self.error_count = stats.get("error_count", self.error_count)
+            state_value = stats.get("state")
+            if state_value:
+                try:
+                    self.state = ControllerState(state_value)
+                except ValueError:
+                    pass
+            start_time_str = stats.get("start_time")
+            if start_time_str:
+                try:
+                    self.start_time = datetime.fromisoformat(start_time_str)
+                except ValueError:
+                    pass
+
+            for session in self.active_sessions.values():
+                task_monitor = TaskCompletionMonitor(session_id=session.session_id)
+                task_monitor.start_monitoring(session.session_id)
+                self.task_monitors[session.session_id] = task_monitor
+
+            if self.active_sessions and not self.running:
+                self._start_controller()
 
     def __del__(self):
         """Cleanup when controller is destroyed."""

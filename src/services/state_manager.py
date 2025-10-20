@@ -10,7 +10,7 @@ import shutil
 import threading
 import tempfile
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Callable
 from pathlib import Path
 
 from ..models.system_configuration import SystemConfiguration
@@ -22,18 +22,47 @@ from ..models.limit_detection_event import LimitDetectionEvent
 class StateManager:
     """Service for managing system state persistence."""
 
-    def __init__(self, config: SystemConfiguration, state_dir: Optional[str] = None):
+    def __init__(
+        self,
+        config: Optional[SystemConfiguration] = None,
+        state_dir: Optional[str] = None,
+    ):
         """Initialize the state manager."""
-        self.config = config
-        self.state_dir = state_dir or os.path.dirname(
-            config.get_persistence_file_path()
+        self.config = config or SystemConfiguration.create_default()
+        default_state_file = self.config.get_persistence_file_path()
+        default_backup_dir = self.config.get_backup_directory_path()
+
+        self.state_dir = state_dir or os.path.dirname(default_state_file)
+        state_filename = os.path.basename(default_state_file)
+        backup_dirname = os.path.basename(default_backup_dir)
+
+        self.state_file = (
+            default_state_file
+            if state_dir is None
+            else os.path.join(self.state_dir, state_filename)
         )
-        self.state_file = config.get_persistence_file_path()
-        self.backup_dir = config.get_backup_directory_path()
+        self.backup_dir = (
+            default_backup_dir
+            if state_dir is None
+            else os.path.join(self.state_dir, backup_dirname)
+        )
 
         # Ensure directories exist
-        os.makedirs(self.state_dir, exist_ok=True)
-        os.makedirs(self.backup_dir, exist_ok=True)
+        for path in (self.state_dir, self.backup_dir):
+            try:
+                os.makedirs(path, exist_ok=True)
+            except PermissionError:
+                # Defer error handling to actual read/write operations
+                pass
+
+        if state_dir is None and not os.access(self.state_dir, os.W_OK):
+            fallback_dir = tempfile.mkdtemp(prefix="claude_state_")
+            state_filename = os.path.basename(default_state_file)
+            backup_dirname = os.path.basename(default_backup_dir)
+            self.state_dir = fallback_dir
+            self.state_file = os.path.join(fallback_dir, state_filename)
+            self.backup_dir = os.path.join(fallback_dir, backup_dirname)
+            os.makedirs(self.backup_dir, exist_ok=True)
 
         # Thread safety
         self._lock = threading.RLock()
@@ -44,12 +73,13 @@ class StateManager:
         self.last_save_time = datetime.now()
 
         # Backup settings
-        self.max_backups = config.backup_count
+        self.max_backups = self.config.backup_count
         self.backup_on_save = True
 
         # State cache
         self._cached_state: Optional[Dict[str, Any]] = None
         self._state_dirty = False
+        self.on_state_loaded: Optional[Callable[[Dict[str, Any]], None]] = None
 
     def save_state(self, state_data: Optional[Dict[str, Any]] = None) -> bool:
         """
@@ -110,6 +140,8 @@ class StateManager:
                         os.remove(temp_file)
                     except Exception:
                         pass
+                if isinstance(e, PermissionError):
+                    raise
                 return False
 
     def load_state(self) -> Optional[Dict[str, Any]]:
@@ -137,6 +169,11 @@ class StateManager:
                     state_data = loaded_data["state"]
                     self._cached_state = state_data
                     self._state_dirty = False
+                    if self.on_state_loaded:
+                        try:
+                            self.on_state_loaded(state_data)
+                        except Exception as callback_error:
+                            print(f"Error restoring state: {callback_error}")
                     return state_data
                 else:
                     # Handle version migration if needed
@@ -158,8 +195,12 @@ class StateManager:
             True if state was saved successfully
         """
         # Try primary location first
-        if self.save_state(state_data):
-            return True
+        try:
+            if self.save_state(state_data):
+                return True
+        except PermissionError:
+            # Continue to fallback locations
+            pass
 
         # Try fallback locations
         fallback_locations = [

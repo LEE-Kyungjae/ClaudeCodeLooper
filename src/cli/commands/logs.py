@@ -49,7 +49,8 @@ def logs(
         since_datetime = None
         if since:
             try:
-                since_datetime = datetime.fromisoformat(since)
+                normalized_since = since.replace("Z", "+00:00")
+                since_datetime = datetime.fromisoformat(normalized_since)
             except ValueError:
                 click.echo(
                     "Error: Invalid since timestamp format. Use ISO format (YYYY-MM-DDTHH:MM:SS)",

@@ -7,7 +7,8 @@ matched pattern, and subsequent actions taken.
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic_core import PydanticUndefined
 
 
 class LimitDetectionEvent(BaseModel):
@@ -36,27 +37,22 @@ class LimitDetectionEvent(BaseModel):
     error_occurred: bool = Field(default=False)
     error_message: Optional[str] = Field(default=None)
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders = {datetime: lambda v: v.isoformat()}
-
-    @validator("matched_pattern", "matched_text")
+    @field_validator("matched_pattern", "matched_text")
     def validate_non_empty_strings(cls, v):
         """Ensure required strings are not empty."""
         if not v or not v.strip():
             raise ValueError("Pattern and text cannot be empty")
         return v.strip()
 
-    @validator("session_id", pre=True, always=True)
+    @field_validator("session_id", mode="before")
     def validate_session_id(cls, v):
         """Allow session_id to be assigned lazily."""
-        if v is None:
+        if v is None or v is PydanticUndefined:
             return None
         v = str(v).strip()
         return v or None
 
-    @validator("cooldown_duration_hours")
+    @field_validator("cooldown_duration_hours")
     def validate_duration(cls, v):
         """Validate cooldown duration is reasonable."""
         if v <= 0:
@@ -65,21 +61,23 @@ class LimitDetectionEvent(BaseModel):
             raise ValueError("Cooldown duration cannot exceed 24 hours")
         return v
 
-    @validator("confidence")
+    @field_validator("confidence")
     def validate_confidence(cls, v):
         """Ensure confidence is between 0 and 1."""
         if not 0.0 <= v <= 1.0:
             raise ValueError("Confidence must be between 0.0 and 1.0")
         return v
 
-    @validator("cooldown_end")
-    def validate_cooldown_end(cls, v, values):
-        """Validate cooldown end time is after start time."""
-        if v is not None and "cooldown_start" in values:
-            cooldown_start = values["cooldown_start"]
-            if cooldown_start is not None and v <= cooldown_start:
-                raise ValueError("Cooldown end must be after start")
-        return v
+    @model_validator(mode="after")
+    def validate_cooldown_sequence(self) -> "LimitDetectionEvent":
+        """Ensure cooldown end follows cooldown start when both provided."""
+        if (
+            self.cooldown_end is not None
+            and self.cooldown_start is not None
+            and self.cooldown_end <= self.cooldown_start
+        ):
+            raise ValueError("Cooldown end must be after start")
+        return self
 
     def start_cooldown(self) -> None:
         """Start the cooldown period."""

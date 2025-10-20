@@ -29,19 +29,21 @@ class ClockDriftEvent:
 class TimingManager:
     """Service for managing precise timing and countdown periods."""
 
-    def __init__(self, config: SystemConfiguration):
+    def __init__(self, config: Optional[SystemConfiguration] = None):
         """Initialize the timing manager."""
-        self.config = config
+        self.config = config or SystemConfiguration.create_default()
         self.active_periods: Dict[str, WaitingPeriod] = {}
         self.completed_periods: List[WaitingPeriod] = []
         self.clock_drift_events: List[ClockDriftEvent] = []
 
         # Timing configuration
-        self.check_frequency = config.timing.get("check_frequency_seconds", 60)
-        self.clock_drift_tolerance = config.timing.get(
+        self.check_frequency = self.config.timing.get("check_frequency_seconds", 60)
+        self.clock_drift_tolerance = self.config.timing.get(
             "clock_drift_tolerance_seconds", 30
         )
-        self.default_cooldown_hours = config.timing.get("default_cooldown_hours", 5.0)
+        self.default_cooldown_hours = self.config.timing.get(
+            "default_cooldown_hours", 5.0
+        )
 
         # Monitoring thread
         self.monitoring_active = False
@@ -77,16 +79,32 @@ class TimingManager:
         Returns:
             WaitingPeriod instance
         """
+        provided_period: Optional[WaitingPeriod] = None
+        if isinstance(period_id, WaitingPeriod):
+            provided_period = period_id
+            period_id = provided_period.period_id
+            duration_hours = provided_period.duration_hours
+            session_id = provided_period.session_id
+            event_id = provided_period.associated_event_id
+            auto_start = False if provided_period.is_active() else auto_start
+
         if duration_hours is None:
             duration_hours = self.default_cooldown_hours
 
-        waiting_period = WaitingPeriod(
-            period_id=period_id,
-            duration_hours=duration_hours,
-            session_id=session_id,
-            associated_event_id=event_id,
-            check_interval_seconds=self.check_frequency,
-        )
+        if provided_period is not None:
+            waiting_period = provided_period
+            waiting_period.check_interval_seconds = self.check_frequency
+        else:
+            period_kwargs = {
+                "duration_hours": duration_hours,
+                "session_id": session_id,
+                "associated_event_id": event_id,
+                "check_interval_seconds": self.check_frequency,
+            }
+            if period_id is not None:
+                period_kwargs["period_id"] = period_id
+
+            waiting_period = WaitingPeriod(**period_kwargs)
 
         with self._lock:
             self.active_periods[waiting_period.period_id] = waiting_period
@@ -177,11 +195,16 @@ class TimingManager:
         completed_ids = []
 
         with self._lock:
+            current_time = datetime.now()
             for period_id, period in list(self.active_periods.items()):
-                if period.check_and_complete():
+                if (
+                    period.is_active()
+                    and period.end_time is not None
+                    and current_time >= period.end_time
+                ):
+                    period.complete()
                     completed_ids.append(period_id)
 
-                    # Execute completion callback if exists
                     callback = self.completion_callbacks.get(period_id)
                     if callback:
                         try:
@@ -191,12 +214,43 @@ class TimingManager:
                                 f"Error executing completion callback for {period_id}: {e}"
                             )
 
-                    # Move to completed list
                     self.completed_periods.append(period)
                     del self.active_periods[period_id]
                     self.completion_callbacks.pop(period_id, None)
+                else:
+                    period.update_check_time()
 
         return completed_ids
+
+    def check_waiting_period(self, period_id: Optional[str] = None) -> List[str]:
+        """Compatibility helper that checks specific or all waiting periods."""
+        if period_id:
+            with self._lock:
+                period = self.active_periods.get(period_id)
+                if not period:
+                    return []
+                if (
+                    period.is_active()
+                    and period.end_time is not None
+                    and datetime.now() >= period.end_time
+                ):
+                    period.complete()
+                    completed_ids = [period_id]
+                    callback = self.completion_callbacks.get(period_id)
+                    if callback:
+                        try:
+                            callback(period)
+                        except Exception as e:
+                            print(
+                                f"Error executing completion callback for {period_id}: {e}"
+                            )
+                    self.completed_periods.append(period)
+                    del self.active_periods[period_id]
+                    self.completion_callbacks.pop(period_id, None)
+                    return completed_ids
+                return []
+
+        return self.check_waiting_periods()
 
     def set_completion_callback(
         self, period_id: str, callback: Callable[[WaitingPeriod], None]
@@ -259,18 +313,16 @@ class TimingManager:
             ClockDriftEvent if significant drift detected
         """
         current_time = datetime.now()
-        expected_time = self.last_clock_check + timedelta(seconds=self.check_frequency)
 
-        # Calculate drift
         actual_elapsed = (current_time - self.last_clock_check).total_seconds()
         expected_elapsed = self.check_frequency
-        drift = abs(actual_elapsed - expected_elapsed)
+        drift_delta = actual_elapsed - expected_elapsed
 
-        if drift > self.clock_drift_tolerance:
+        if abs(drift_delta) > self.clock_drift_tolerance:
             # Significant drift detected
             drift_event = ClockDriftEvent(
                 detection_time=current_time,
-                drift_seconds=drift,
+                drift_seconds=drift_delta,
                 previous_time=self.last_clock_check,
                 current_time=current_time,
                 action_taken="adjusting_periods",
@@ -288,7 +340,7 @@ class TimingManager:
     def _adjust_periods_for_drift(self, drift_event: ClockDriftEvent) -> None:
         """Adjust waiting periods for detected clock drift."""
         with self._lock:
-            adjustment = timedelta(seconds=drift_event.drift_seconds)
+            adjustment = timedelta(seconds=abs(drift_event.drift_seconds))
 
             for period in self.active_periods.values():
                 if period.is_active() and period.end_time:

@@ -144,6 +144,10 @@ backups/
 *.swo
 *~
 
+# Allow tracked library modules under src/
+!src/lib/
+!src/lib/**
+
 # OS
 .DS_Store
 Thumbs.db

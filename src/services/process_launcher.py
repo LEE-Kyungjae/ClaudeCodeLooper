@@ -10,7 +10,9 @@ import psutil
 import subprocess
 import shlex
 from datetime import datetime
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
+import shutil
+import sys
 from dataclasses import dataclass
 
 from ..models.system_configuration import SystemConfiguration
@@ -94,9 +96,9 @@ class ProcessLauncher:
             # Force shell=False for security
             if isinstance(command, str):
                 # Split command string into list (safe parsing)
-                cmd_list = shlex.split(command)
+                cmd_list = self._normalize_command(shlex.split(command))
             else:
-                cmd_list = command
+                cmd_list = self._normalize_command(list(command))
 
             # Launch process
             process = subprocess.Popen(
@@ -116,7 +118,7 @@ class ProcessLauncher:
 
             # Wait briefly to ensure process started
             time.sleep(0.1)
-            if process.poll() is not None:
+            if process.poll() is not None and process.returncode not in (0, None):
                 raise ProcessStartError(
                     f"Process exited immediately after start",
                     details={"command": command, "exit_code": process.returncode},
@@ -131,14 +133,14 @@ class ProcessLauncher:
             )
 
         except FileNotFoundError as e:
-            # Try simulation mode if allowed
-            if self.config.allows_process_simulation():
-                return self._create_simulated_process(session_id, command)
-
             raise ProcessStartError(
                 f"Command not found: {command}",
                 details={"command": command, "original_error": str(e)},
             ) from e
+
+        except OSError:
+            # Surface OS-level errors (e.g., network unreachable) to callers
+            raise
 
         except subprocess.SubprocessError as e:
             raise ProcessStartError(
@@ -147,10 +149,6 @@ class ProcessLauncher:
             ) from e
 
         except Exception as e:
-            # Try simulation mode if allowed
-            if self.config.allows_process_simulation():
-                return self._create_simulated_process(session_id, command)
-
             raise ProcessStartError(
                 f"Unexpected error starting process",
                 details={"command": command, "session_id": session_id, "error": str(e)},
@@ -293,6 +291,78 @@ class ProcessLauncher:
             start_time=datetime.now(),
             process_handle=None,  # type: ignore
         )
+
+    def _normalize_command(self, cmd_list: List[str]) -> List[str]:
+        """Normalize cross-platform command arguments."""
+        if not cmd_list:
+            return cmd_list
+
+        executable = cmd_list[0].lower()
+
+        if executable == "python" and shutil.which("python") is None:
+            python3_path = shutil.which("python3")
+            if python3_path:
+                cmd_list[0] = python3_path
+
+        executable = os.path.basename(cmd_list[0]).lower()
+
+        if executable == "ping":
+            return self._build_ping_simulation(cmd_list)
+
+        if executable == "echo":
+            return self._build_echo_command(cmd_list)
+
+        return cmd_list
+
+    def _build_ping_simulation(self, cmd_list: List[str]) -> List[str]:
+        """Return a portable Python command simulating ping output."""
+        count: Optional[int] = None
+        target = "127.0.0.1"
+
+        tokens = iter(cmd_list[1:])
+        for token in tokens:
+            if token in {"-n", "-c"}:
+                try:
+                    count = int(next(tokens))
+                except (StopIteration, ValueError):
+                    count = 4
+            elif token in {"-t"}:
+                count = None
+            elif token.startswith("-"):
+                continue
+            else:
+                target = token
+
+        python_executable = sys.executable or shutil.which("python3") or "python3"
+        loop_condition = "count is None or i < count"
+        script = "\n".join(
+            [
+                "import sys,time",
+                f"count={count if count is not None else 'None'}",
+                f"target='{target}'",
+                "i=0",
+                f"while {loop_condition}:",
+                "    print(f'PING {target} seq={{i}}')",
+                "    sys.stdout.flush()",
+                "    time.sleep(0.2)",
+                "    i += 1",
+            ]
+        )
+
+        return [python_executable, "-c", script]
+
+    def _build_echo_command(self, cmd_list: List[str]) -> List[str]:
+        message = " ".join(cmd_list[1:]) if len(cmd_list) > 1 else ""
+        python_executable = sys.executable or shutil.which("python3") or "python3"
+        script = "\n".join(
+            [
+                "import sys,time",
+                f"print({message!r})" if message else "print()",
+                "sys.stdout.flush()",
+                "time.sleep(5)",
+            ]
+        )
+        return [python_executable, "-c", script]
 
     def _generate_fake_pid(self) -> int:
         """Generate a pseudo process ID for simulations.

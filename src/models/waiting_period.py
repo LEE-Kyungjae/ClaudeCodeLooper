@@ -7,7 +7,7 @@ remaining duration, and completion callback information.
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, Callable, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from enum import Enum
 
 
@@ -47,13 +47,9 @@ class WaitingPeriod(BaseModel):
         default_factory=lambda: [0.5, 0.25, 0.1]
     )  # Fractions remaining
 
-    class Config:
-        """Pydantic configuration."""
+    model_config = ConfigDict(use_enum_values=True)
 
-        use_enum_values = True
-        json_encoders = {datetime: lambda v: v.isoformat()}
-
-    @validator("duration_hours")
+    @field_validator("duration_hours")
     def validate_duration(cls, v):
         """Validate duration is reasonable."""
         if v <= 0:
@@ -62,14 +58,14 @@ class WaitingPeriod(BaseModel):
             raise ValueError("Duration cannot exceed 24 hours")
         return v
 
-    @validator("check_interval_seconds")
+    @field_validator("check_interval_seconds")
     def validate_check_interval(cls, v):
         """Validate check interval is reasonable."""
         if not 1 <= v <= 3600:  # 1 second to 1 hour
             raise ValueError("Check interval must be between 1 and 3600 seconds")
         return v
 
-    @validator("notification_intervals")
+    @field_validator("notification_intervals")
     def validate_notification_intervals(cls, v):
         """Validate notification intervals are valid fractions."""
         if not v:
