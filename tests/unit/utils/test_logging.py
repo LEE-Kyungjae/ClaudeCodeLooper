@@ -1,4 +1,5 @@
 """Tests for structured logging utilities."""
+
 from __future__ import annotations
 
 import json
@@ -37,4 +38,3 @@ def test_configure_default_logger_creates_file(tmp_path):
     assert log_file.exists()
     contents = log_file.read_text()
     assert "hello world" in contents
-

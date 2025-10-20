@@ -1,4 +1,5 @@
 """Test configuration for path adjustments."""
+
 from __future__ import annotations
 
 import os

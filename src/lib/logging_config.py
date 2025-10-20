@@ -16,9 +16,7 @@ class SafeRotatingFileHandler(RotatingFileHandler):
         try:
             super().doRollover()
         except Exception as exc:  # pylint: disable=broad-except
-            logging.getLogger(__name__).warning(
-                "Log rotation failed: %s", exc
-            )
+            logging.getLogger(__name__).warning("Log rotation failed: %s", exc)
             # Keep using current file without rotation
 
 
