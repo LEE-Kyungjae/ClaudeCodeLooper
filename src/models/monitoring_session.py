@@ -7,7 +7,7 @@ including start time, current status, and detection history.
 import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from enum import Enum
 
 from .restart_command_config import RestartCommandConfiguration
@@ -44,20 +44,16 @@ class MonitoringSession(BaseModel):
     last_error: Optional[str] = Field(default=None)
     restart_config: Optional[RestartCommandConfiguration] = Field(default=None)
 
-    class Config:
-        """Pydantic configuration."""
+    model_config = ConfigDict(use_enum_values=True)
 
-        use_enum_values = True
-        json_encoders = {datetime: lambda v: v.isoformat()}
-
-    @validator("claude_command")
+    @field_validator("claude_command")
     def validate_claude_command(cls, v):
         """Validate Claude Code command."""
         if not v or not v.strip():
             raise ValueError("Claude command cannot be empty")
         return v.strip()
 
-    @validator("detection_count", "error_count")
+    @field_validator("detection_count", "error_count")
     def validate_counts(cls, v):
         """Ensure counts are non-negative."""
         if v < 0:
@@ -75,6 +71,11 @@ class MonitoringSession(BaseModel):
 
     def stop_monitoring(self) -> None:
         """Stop the monitoring session."""
+        self.status = SessionStatus.STOPPED
+        self.last_activity = datetime.now()
+
+    def mark_crashed(self) -> None:
+        """Mark session as crashed and stop monitoring."""
         self.status = SessionStatus.STOPPED
         self.last_activity = datetime.now()
 

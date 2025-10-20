@@ -23,11 +23,6 @@ class QueuedTask(BaseModel):
     notes: Optional[str] = Field(default=None)
     post_commands: List[str] = Field(default_factory=list)
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders = {datetime: lambda value: value.isoformat()}
-
     def to_dict(self) -> Dict[str, Any]:
         """Return JSON-serializable representation."""
         return {

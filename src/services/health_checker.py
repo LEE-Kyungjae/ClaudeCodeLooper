@@ -8,7 +8,7 @@ import time
 import psutil
 import threading
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
 
@@ -36,10 +36,36 @@ class ProcessInfo:
     session_id: str
     command: str
     start_time: datetime
-    status: ProcessState
+    _status: ProcessState
     cpu_percent: float = 0.0
     memory_mb: float = 0.0
     open_files: int = 0
+
+    @property
+    def status(self) -> str:
+        if isinstance(self._status, ProcessState):
+            return self._status.value
+        return str(self._status)
+
+    @status.setter
+    def status(self, value: Any) -> None:
+        if isinstance(value, ProcessState):
+            self._status = value
+        elif isinstance(value, str):
+            try:
+                self._status = ProcessState(value.lower())
+            except ValueError:
+                self._status = value
+        else:
+            self._status = ProcessState.UNKNOWN
+
+    def status_enum(self) -> ProcessState:
+        if isinstance(self._status, ProcessState):
+            return self._status
+        try:
+            return ProcessState(str(self._status).lower())
+        except ValueError:
+            return ProcessState.UNKNOWN
 
 
 @dataclass
@@ -108,7 +134,7 @@ class HealthChecker:
                 session_id=session_id,
                 command=command,
                 start_time=start_time or datetime.now(),
-                status=ProcessState.STARTING,
+                _status=ProcessState.STARTING,
             )
 
             self.monitored_processes[session_id] = process_info
@@ -198,7 +224,7 @@ class HealthChecker:
         """
         if session_id not in self.monitored_processes:
             return None
-        return self.monitored_processes[session_id].status
+        return self.monitored_processes[session_id].status_enum()
 
     def is_healthy(self, session_id: str) -> bool:
         """Check if a process is healthy based on thresholds.

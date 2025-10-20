@@ -8,7 +8,7 @@ import uuid
 import re
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any, Pattern
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from enum import Enum
 
 
@@ -78,13 +78,9 @@ class TaskCompletionMonitor(BaseModel):
     require_explicit_completion: bool = Field(default=False)
     ignore_system_messages: bool = Field(default=True)
 
-    class Config:
-        """Pydantic configuration."""
+    model_config = ConfigDict(use_enum_values=True)
 
-        use_enum_values = True
-        json_encoders = {datetime: lambda v: v.isoformat()}
-
-    @validator("task_start_patterns", "task_completion_patterns")
+    @field_validator("task_start_patterns", "task_completion_patterns")
     def validate_patterns(cls, v):
         """Validate regex patterns are compilable."""
         if not v:
@@ -100,14 +96,14 @@ class TaskCompletionMonitor(BaseModel):
 
         return compiled_patterns
 
-    @validator("timeout_seconds")
+    @field_validator("timeout_seconds")
     def validate_timeout(cls, v):
         """Validate timeout is reasonable."""
         if not 60 <= v <= 3600:  # 1 minute to 1 hour
             raise ValueError("Timeout must be between 60 and 3600 seconds")
         return v
 
-    @validator("check_interval")
+    @field_validator("check_interval")
     def validate_check_interval(cls, v):
         """Validate check interval is reasonable."""
         if not 0.1 <= v <= 60.0:

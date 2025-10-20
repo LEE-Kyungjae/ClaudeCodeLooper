@@ -5,7 +5,7 @@ restart monitoring system.
 """
 
 from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from enum import Enum
 from pathlib import Path
 import os
@@ -18,6 +18,17 @@ class LogLevel(str, Enum):
     INFO = "INFO"
     WARN = "WARN"
     ERROR = "ERROR"
+
+
+def _default_monitoring() -> Dict[str, Any]:
+    return {
+        "check_interval": 1.0,
+        "task_timeout": 300,
+        "output_buffer_size": 1000,
+        "max_processes": 5,
+        "allow_process_simulation": True,
+        "test_mode": False,
+    }
 
 
 class SystemConfiguration(BaseModel):
@@ -51,16 +62,7 @@ class SystemConfiguration(BaseModel):
     backup_directory: str = Field(default="backups")
 
     # Monitoring settings
-    monitoring: Dict[str, Any] = Field(
-        default_factory=lambda: {
-            "check_interval": 1.0,
-            "task_timeout": 300,
-            "output_buffer_size": 1000,
-            "max_processes": 5,
-            "allow_process_simulation": True,
-            "test_mode": False,
-        }
-    )
+    monitoring: Dict[str, Any] = Field(default_factory=_default_monitoring)
 
     # Timing configuration
     timing: Dict[str, Any] = Field(
@@ -113,13 +115,9 @@ class SystemConfiguration(BaseModel):
         }
     )
 
-    class Config:
-        """Pydantic configuration."""
+    model_config = ConfigDict(validate_assignment=True)
 
-        use_enum_values = True
-        validate_assignment = True
-
-    @validator("detection_patterns")
+    @field_validator("detection_patterns")
     def validate_detection_patterns(cls, v):
         """Validate detection patterns are not empty and compilable."""
         if not v:
@@ -137,22 +135,41 @@ class SystemConfiguration(BaseModel):
 
         return [p.strip() for p in v]
 
-    @validator("max_log_size_mb")
+    @field_validator("max_log_size_mb")
     def validate_log_size(cls, v):
         """Validate log size is reasonable."""
         if not 1 <= v <= 1000:
             raise ValueError("Log size must be between 1 and 1000 MB")
         return v
 
-    @validator("backup_count")
+    @field_validator("log_level", mode="before")
+    def normalize_log_level(cls, value: Any) -> LogLevel:
+        """Ensure log level values resolve to LogLevel enum members."""
+        if isinstance(value, LogLevel):
+            return value
+        if isinstance(value, str):
+            try:
+                return LogLevel(value.upper())
+            except ValueError as exc:
+                raise ValueError(f"Invalid log level: {value}") from exc
+        raise ValueError("Log level must be a string or LogLevel enum")
+
+    @field_validator("backup_count")
     def validate_backup_count(cls, v):
         """Validate backup count is reasonable."""
         if not 0 <= v <= 10:
             raise ValueError("Backup count must be between 0 and 10")
         return v
 
-    @validator("monitoring")
-    def validate_monitoring_settings(cls, v):
+    @field_validator("monitoring", mode="before")
+    def merge_monitoring_defaults(cls, v: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        merged = _default_monitoring()
+        if isinstance(v, dict):
+            merged.update(v)
+        return merged
+
+    @field_validator("monitoring")
+    def validate_monitoring_settings(cls, v: Dict[str, Any]) -> Dict[str, Any]:
         """Validate monitoring configuration."""
         required_keys = [
             "check_interval",
@@ -165,10 +182,10 @@ class SystemConfiguration(BaseModel):
                 raise ValueError(f"Missing required monitoring setting: {key}")
 
         # Validate ranges
-        if not 0.1 <= v["check_interval"] <= 60:
-            raise ValueError("Check interval must be between 0.1 and 60 seconds")
-        if not 60 <= v["task_timeout"] <= 3600:
-            raise ValueError("Task timeout must be between 60 and 3600 seconds")
+        if not 0.001 <= v["check_interval"] <= 60:
+            raise ValueError("Check interval must be between 0.001 and 60 seconds")
+        if not 1 <= v["task_timeout"] <= 3600:
+            raise ValueError("Task timeout must be between 1 and 3600 seconds")
         if not 100 <= v["output_buffer_size"] <= 10000:
             raise ValueError("Output buffer size must be between 100 and 10000 lines")
         if not 1 <= v["max_processes"] <= 20:
@@ -176,7 +193,7 @@ class SystemConfiguration(BaseModel):
 
         return v
 
-    @validator("timing")
+    @field_validator("timing")
     def validate_timing_settings(cls, v):
         """Validate timing configuration."""
         required_keys = ["default_cooldown_hours", "check_frequency_seconds"]
@@ -191,7 +208,7 @@ class SystemConfiguration(BaseModel):
 
         return v
 
-    @validator("performance")
+    @field_validator("performance")
     def validate_performance_settings(cls, v):
         """Validate performance configuration."""
         if "max_memory_mb" in v and not 50 <= v["max_memory_mb"] <= 2000:
@@ -307,7 +324,7 @@ class SystemConfiguration(BaseModel):
 
     def create_backup_config(self) -> Dict[str, Any]:
         """Create a backup-safe version of configuration."""
-        backup_config = self.dict()
+        backup_config = self.model_dump(mode="json")
 
         # Remove sensitive or temporary data
         sensitive_keys = ["config_file", "last_modified"]
@@ -364,7 +381,7 @@ class SystemConfiguration(BaseModel):
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
         with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(self.dict(), f, indent=2, ensure_ascii=False)
+            json.dump(self.model_dump(mode="json"), f, indent=2, ensure_ascii=False)
 
     def __str__(self) -> str:
         """String representation of the configuration."""
@@ -411,6 +428,16 @@ class SystemConfiguration(BaseModel):
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        default_dict = cls.create_default().dict()
+        default_dict = cls.create_default().model_dump(mode="json")
         merged = cls._merge_dict(default_dict, data)
+
+        # Ensure enum fields maintain their enum types after merging
+        log_level = merged.get("log_level")
+        if isinstance(log_level, str):
+            normalized_level = log_level.upper()
+            try:
+                merged["log_level"] = LogLevel(normalized_level)
+            except ValueError:
+                merged["log_level"] = LogLevel.INFO
+
         return cls(**merged)

@@ -94,8 +94,7 @@ class ConfigManager:
 
             except Exception as e:
                 print(f"Error loading config from {config_path}: {e}")
-                # Fall back to default configuration
-                return self.load_default_config()
+                raise
 
     def load_config_with_recovery(self, file_path: str) -> SystemConfiguration:
         """
@@ -121,8 +120,16 @@ class ConfigManager:
                 except Exception:
                     pass
 
-            # Return default configuration
-            return self.load_default_config()
+            # Write default configuration to original path
+            default_config = self.load_default_config()
+            try:
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                default_config.to_file(file_path)
+                self.config_file = file_path
+            except Exception as write_error:
+                print(f"Unable to write default config to {file_path}: {write_error}")
+
+            return default_config
 
     def load_config_with_env_override(self) -> SystemConfiguration:
         """
@@ -270,7 +277,7 @@ class ConfigManager:
         """
         # Simplified schema validation
         # In production, would use jsonschema library
-        required_fields = ["log_level", "detection_patterns", "monitoring", "timing"]
+        required_fields = ["log_level", "detection_patterns"]
 
         for field in required_fields:
             if field not in config_data:
@@ -287,6 +294,22 @@ class ConfigManager:
             or not config_data["detection_patterns"]
         ):
             return False
+
+        # If provided, monitoring must be object with required keys
+        monitoring = config_data.get("monitoring")
+        if monitoring is not None:
+            if not isinstance(monitoring, dict):
+                return False
+            if "check_interval" not in monitoring or "task_timeout" not in monitoring:
+                return False
+
+        # If provided, timing must include default cooldown
+        timing = config_data.get("timing")
+        if timing is not None:
+            if not isinstance(timing, dict):
+                return False
+            if "default_cooldown_hours" not in timing:
+                return False
 
         return True
 

@@ -7,7 +7,7 @@ when Claude Code is restarted after cooldown periods.
 import uuid
 import os
 from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from pathlib import Path
 
 
@@ -33,19 +33,16 @@ class RestartCommandConfiguration(BaseModel):
     pre_restart_commands: List[str] = Field(default_factory=list)
     post_restart_commands: List[str] = Field(default_factory=list)
 
-    class Config:
-        """Pydantic configuration."""
+    model_config = ConfigDict(validate_assignment=True)
 
-        validate_assignment = True
-
-    @validator("command_template")
+    @field_validator("command_template")
     def validate_command_template(cls, v):
         """Validate the command template is not empty."""
         if not v or not v.strip():
             raise ValueError("Command template cannot be empty")
         return v.strip()
 
-    @validator("working_directory")
+    @field_validator("working_directory")
     def validate_working_directory(cls, v):
         """Validate working directory exists or can be created."""
         if v is None:
@@ -74,28 +71,28 @@ class RestartCommandConfiguration(BaseModel):
 
         return expanded_path
 
-    @validator("retry_count")
+    @field_validator("retry_count")
     def validate_retry_count(cls, v):
         """Validate retry count is within reasonable bounds."""
         if not 0 <= v <= 10:
             raise ValueError("Retry count must be between 0 and 10")
         return v
 
-    @validator("retry_delay")
+    @field_validator("retry_delay")
     def validate_retry_delay(cls, v):
         """Validate retry delay is reasonable."""
         if not 1 <= v <= 300:
             raise ValueError("Retry delay must be between 1 and 300 seconds")
         return v
 
-    @validator("timeout_seconds")
+    @field_validator("timeout_seconds")
     def validate_timeout(cls, v):
         """Validate timeout is reasonable."""
         if v is not None and v < 1:
             raise ValueError("Timeout must be at least 1 second")
         return v
 
-    @validator("environment_variables")
+    @field_validator("environment_variables")
     def validate_environment_variables(cls, v):
         """Validate environment variables."""
         if not isinstance(v, dict):
@@ -180,7 +177,7 @@ class RestartCommandConfiguration(BaseModel):
 
     def clone(self) -> "RestartCommandConfiguration":
         """Create a copy of this configuration with a new ID."""
-        data = self.dict()
+        data = self.model_dump(mode="json")
         data["config_id"] = f"cfg_{uuid.uuid4().hex[:12]}"
         return RestartCommandConfiguration(**data)
 

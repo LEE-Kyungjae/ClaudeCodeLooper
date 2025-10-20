@@ -58,10 +58,11 @@ def _show_status_once(cli_ctx, output_json: bool, verbose: bool):
         if system_status.active_sessions > 0:
             sessions = []
             for session in cli_ctx.controller.active_sessions.values():
+                session_state = getattr(session.status, "value", session.status)
                 sessions.append(
                     {
                         "session_id": session.session_id,
-                        "status": session.status.value,
+                        "status": session_state,
                         "claude_process_id": session.claude_process_id,
                         "detection_count": session.detection_count,
                         "uptime_seconds": session.get_uptime_seconds(),
@@ -117,7 +118,8 @@ def _show_status_once(cli_ctx, output_json: bool, verbose: bool):
             click.echo("\n=== Active Sessions ===")
             for session in cli_ctx.controller.active_sessions.values():
                 click.echo(f"Session: {session.session_id}")
-                click.echo(f"  Status: {session.status.value}")
+                session_state = getattr(session.status, "value", session.status)
+                click.echo(f"  Status: {session_state}")
                 click.echo(f"  PID: {session.claude_process_id}")
                 click.echo(f"  Detections: {session.detection_count}")
                 click.echo(f"  Uptime: {session.get_uptime_seconds():.1f}s")

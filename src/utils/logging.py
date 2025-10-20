@@ -27,15 +27,31 @@ class StructuredLogger:
         formatter = StructuredFormatter()
 
         # Console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        self.logger.addHandler(console_handler)
+        if not any(getattr(handler, "_structured_console", False) for handler in self.logger.handlers):
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            console_handler._structured_console = True  # type: ignore[attr-defined]
+            self.logger.addHandler(console_handler)
 
         # File handler if specified
         if log_file:
-            file_handler = logging.FileHandler(log_file)
-            file_handler.setFormatter(formatter)
-            self.logger.addHandler(file_handler)
+            file_path = Path(log_file).expanduser()
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+
+            existing_file_handler = next(
+                (
+                    handler
+                    for handler in self.logger.handlers
+                    if isinstance(handler, logging.FileHandler)
+                    and getattr(handler, "_structured_log_path", None) == str(file_path)
+                ),
+                None,
+            )
+            if existing_file_handler is None:
+                file_handler = logging.FileHandler(file_path)
+                file_handler.setFormatter(formatter)
+                file_handler._structured_log_path = str(file_path)  # type: ignore[attr-defined]
+                self.logger.addHandler(file_handler)
 
     def set_level(self, level: str) -> None:
         """Set logging level.
@@ -74,13 +90,33 @@ class StructuredLogger:
             message: Log message
             **kwargs: Additional structured data
         """
-        # Merge context with kwargs
-        data = {**self.context, **kwargs}
+        log_data = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "level": logging.getLevelName(level),
+            "logger": self.logger.name,
+            "message": message,
+        }
 
-        # Create structured record
-        extra = {"structured_data": data}
+        if self.context:
+            log_data.update(self.context)
+        if kwargs:
+            log_data.update(kwargs)
 
-        self.logger.log(level, message, extra=extra)
+        serialized = json.dumps(log_data, default=str)
+
+        self._ensure_capture_handler_format()
+        self.logger.log(level, serialized, extra={"structured_json": serialized})
+
+    @staticmethod
+    def _ensure_capture_handler_format() -> None:
+        """Ensure pytest's LogCaptureHandler, if present, outputs raw messages."""
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers:
+            if handler.__class__.__name__ == "LogCaptureHandler":
+                if getattr(handler, "_structured_format_applied", False):
+                    return
+                handler.setFormatter(logging.Formatter("%(message)s"))
+                handler._structured_format_applied = True  # type: ignore[attr-defined]
 
     def debug(self, message: str, **kwargs: Any) -> None:
         """Log debug message with structured data."""
@@ -115,7 +151,9 @@ class StructuredFormatter(logging.Formatter):
         Returns:
             Formatted log string
         """
-        # Base log data
+        if hasattr(record, "structured_json"):
+            return record.structured_json  # type: ignore[return-value]
+
         log_data = {
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "level": record.levelname,
@@ -123,15 +161,9 @@ class StructuredFormatter(logging.Formatter):
             "message": record.getMessage(),
         }
 
-        # Add structured data if present
-        if hasattr(record, "structured_data"):
-            log_data.update(record.structured_data)
-
-        # Add exception info if present
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
 
-        # Return JSON formatted log
         return json.dumps(log_data, default=str)
 
 

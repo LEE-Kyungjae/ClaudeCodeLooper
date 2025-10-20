@@ -61,7 +61,9 @@ class PatternDetector:
     def _compile_patterns(self) -> None:
         """Compile regex patterns for efficient matching."""
         self.compiled_patterns.clear()
-        flags = 0 if self.case_sensitive else re.IGNORECASE
+        flags = re.MULTILINE | re.DOTALL
+        if not self.case_sensitive:
+            flags |= re.IGNORECASE
 
         for pattern in self.detection_patterns:
             try:
@@ -87,15 +89,28 @@ class PatternDetector:
             with self._lock:
                 # Add to buffer for context
                 lines = text.split("\n")
+                line_records = []
                 for line in lines:
                     self.line_number += 1
-                    self.output_buffer.append((self.line_number, line.strip()))
+                    cleaned = line.strip()
+                    self.output_buffer.append((self.line_number, cleaned))
+                    line_records.append((self.line_number, cleaned))
 
                 # Check each line for patterns
-                for line_num, line in [(self.line_number, lines[-1])] if lines else []:
+                for line_num, line in line_records:
                     result = self._check_line_for_patterns(line, line_num)
                     if result.matched:
                         event = self._create_detection_event(result)
+                        self.detection_history.append(event)
+                        self.detection_count += 1
+                        self.last_detection_time = datetime.now()
+                        return event
+
+                # Fallback: check entire text block for multi-line matches
+                if line_records:
+                    block_result = self._check_text_block_for_patterns(text, line_records[-1][0])
+                    if block_result and block_result.matched:
+                        event = self._create_detection_event(block_result)
                         self.detection_history.append(event)
                         self.detection_count += 1
                         self.last_detection_time = datetime.now()
@@ -124,6 +139,25 @@ class PatternDetector:
         if self._is_system_message(line):
             return DetectionResult(matched=False)
 
+        normalized_line = line.lower()
+        fast_phrases = [
+            "usage limit exceeded",
+            "quota exceeded",
+            "rate limit",
+            "limit exceeded",
+        ]
+        for phrase in fast_phrases:
+            if phrase in normalized_line:
+                return DetectionResult(
+                    matched=True,
+                    pattern=phrase,
+                    matched_text=line.strip(),
+                    confidence=0.95,
+                    line_number=line_number,
+                    context_before=self._get_context_before(line_number),
+                    context_after=self._get_context_after(line_number),
+                )
+
         best_match = DetectionResult(matched=False)
         best_confidence = 0.0
         confidence_threshold = self.config.monitoring.get("confidence_threshold", 0.5)
@@ -135,7 +169,11 @@ class PatternDetector:
                     pattern.pattern, match.group(), line, i
                 )
 
-                if confidence > best_confidence:
+                if confidence > best_confidence or (
+                    confidence == best_confidence
+                    and len(match.group())
+                    > len(best_match.matched_text or "")
+                ):
                     best_confidence = confidence
                     best_match = DetectionResult(
                         matched=True,
@@ -147,59 +185,177 @@ class PatternDetector:
                         context_after=self._get_context_after(line_number),
                     )
 
-                    # Early exit optimization: if very high confidence, no need to check more
-                    if confidence > 0.9:
-                        return best_match
+                    # Continue checking remaining patterns to prefer more specific matches
 
         # Only return matches above confidence threshold
         if best_match.matched and best_match.confidence >= confidence_threshold:
             return best_match
 
+        heuristic_match = self._heuristic_detection(line, line_number)
+        if heuristic_match and heuristic_match.confidence >= confidence_threshold:
+            return heuristic_match
+
         return DetectionResult(matched=False)
+
+    def _heuristic_detection(
+        self, line: str, line_number: int
+    ) -> Optional[DetectionResult]:
+        """Apply heuristic checks for common limit phrases."""
+        normalized = line.lower()
+
+        if self._is_system_message(line):
+            return None
+
+        has_usage_limit = "usage" in normalized and "limit" in normalized
+        has_rate_limit = "rate limit" in normalized
+        has_quota_limit = "quota" in normalized and "exceeded" in normalized
+        has_exceeded = any(word in normalized for word in ["exceeded", "reached"])
+        has_wait = "wait" in normalized
+        has_time_ref = bool(re.search(r"\b\d+\s*hours?\b", normalized))
+
+        confidence = 0.0
+        if has_quota_limit:
+            confidence = 0.85
+        elif has_usage_limit and has_exceeded:
+            confidence = 0.9
+        elif has_usage_limit and has_wait and has_time_ref:
+            confidence = 0.85
+        elif has_rate_limit and (has_time_ref or has_exceeded):
+            confidence = 0.8
+        elif has_wait and has_time_ref:
+            confidence = 0.75
+
+        if confidence == 0.0:
+            return None
+
+        return DetectionResult(
+            matched=True,
+            pattern="heuristic",
+            matched_text=line.strip(),
+            confidence=min(1.0, confidence),
+            line_number=line_number,
+            context_before=self._get_context_before(line_number),
+            context_after=self._get_context_after(line_number),
+        )
+
+    def _check_text_block_for_patterns(
+        self, text: str, line_number_hint: int
+    ) -> Optional[DetectionResult]:
+        """Check entire text block to allow multi-line pattern matching."""
+        if not text.strip():
+            return None
+
+        if "\n" not in text and self._is_system_message(text):
+            return None
+
+        best_match = None
+        best_confidence = 0.0
+        confidence_threshold = self.config.monitoring.get("confidence_threshold", 0.5)
+
+        for idx, pattern in enumerate(self.compiled_patterns):
+            match = pattern.search(text)
+            if not match:
+                continue
+
+            confidence = self._calculate_confidence(
+                pattern.pattern, match.group(), text, idx
+            )
+
+            if confidence > best_confidence or (
+                best_match
+                and confidence == best_confidence
+                and len(match.group()) > len(best_match.matched_text or "")
+            ):
+                best_confidence = confidence
+                best_match = DetectionResult(
+                    matched=True,
+                    pattern=pattern.pattern,
+                    matched_text=match.group(),
+                    confidence=confidence,
+                    line_number=line_number_hint,
+                    context_before=self._get_context_before(line_number_hint),
+                    context_after=self._get_context_after(line_number_hint),
+                )
+
+                # Continue scanning to allow more specific matches later in the list
+
+        if best_match and best_confidence >= confidence_threshold:
+            return best_match
+
+        heuristic = self._heuristic_detection(text, line_number_hint)
+        if heuristic and heuristic.confidence >= confidence_threshold:
+            return heuristic
+
+        return None
 
     def _calculate_confidence(
         self, pattern: str, matched_text: str, full_line: str, pattern_index: int
     ) -> float:
         """Calculate confidence score for a pattern match."""
-        confidence = 0.5  # Base confidence
+        confidence = 0.3  # Base confidence lower to avoid false positives
 
-        # Pattern specificity bonus
-        if len(pattern) > 20:
-            confidence += 0.2
-        elif len(pattern) > 10:
-            confidence += 0.1
+        normalized_line = full_line.lower()
+        normalized_match = matched_text.lower()
 
-        # Keyword presence bonus
-        limit_keywords = ["limit", "exceeded", "wait", "hours", "quota", "rate"]
-        keyword_count = sum(
-            1 for keyword in limit_keywords if keyword.lower() in full_line.lower()
+        # Pattern specificity bonus based on length
+        if len(pattern) >= 25:
+            confidence += 0.25
+        elif len(pattern) >= 15:
+            confidence += 0.15
+        elif len(pattern) >= 8:
+            confidence += 0.05
+
+        # Strong signal keywords heavily boost confidence
+        strong_keywords = [
+            "usage limit exceeded",
+            "rate limit",
+            "limit exceeded",
+            "please wait",
+            "quota exceeded",
+            "cooldown",
+            "temporarily disabled",
+            "locked for",
+        ]
+        if any(keyword in normalized_line for keyword in strong_keywords):
+            confidence += 0.4
+
+        # Supporting keywords add moderate confidence
+        supporting_keywords = ["wait", "hours", "exceeded", "quota", "limit"]
+        supporting_hits = sum(
+            1 for keyword in supporting_keywords if keyword in normalized_line
         )
-        confidence += min(0.3, keyword_count * 0.1)
+        confidence += min(0.2, supporting_hits * 0.05)
 
-        # Time-related patterns bonus
-        time_patterns = [r"\d+\s*hours?", r"\d+:\d+:\d+", r"\d+\s*minutes?"]
-        for time_pattern in time_patterns:
-            if re.search(time_pattern, full_line, re.IGNORECASE):
-                confidence += 0.1
-                break
-
-        # Number presence bonus (often indicates specific limits)
-        if re.search(r"\b\d+\b", matched_text):
+        # Time and numeric references
+        if re.search(r"\b\d+\s*hours?\b", normalized_line):
+            confidence += 0.2
+        elif re.search(r"\b\d+\b", normalized_line):
             confidence += 0.1
-
-        # Pattern order bonus (earlier patterns are more specific)
-        pattern_bonus = max(0, (len(self.compiled_patterns) - pattern_index) * 0.05)
-        confidence += pattern_bonus
 
         # Error/warning context bonus
         error_indicators = ["error", "warning", "alert", "failed", "denied"]
-        if any(indicator in full_line.lower() for indicator in error_indicators):
+        if any(indicator in normalized_line for indicator in error_indicators):
             confidence += 0.1
 
-        # Length penalty for very short matches
-        if len(matched_text) < 5:
+        # Penalize generic matches without strong context
+        if normalized_match.strip() in {"limit", "usage limit", "wait"}:
+            confidence -= 0.2
+            if any(word in normalized_line for word in ["reached", "exceeded", "hit"]):
+                confidence += 0.3
+        else:
+            confidence = max(confidence, 0.6)
+
+        if "limit" in normalized_line and any(
+            word in normalized_line for word in ["reached", "exceeded", "hit"]
+        ):
+            confidence = max(confidence, 0.6)
+
+        # Penalize if text references configuration/settings
+        neutral_terms = ["configuration", "setting", "updated", "requested"]
+        if any(term in normalized_line for term in neutral_terms):
             confidence -= 0.1
 
+        # Ensure confidence remains within bounds
         return min(1.0, max(0.0, confidence))
 
     def _is_system_message(self, line: str) -> bool:

@@ -1,11 +1,6 @@
-"""OutputCapture service for process output management.
-
-Handles real-time capture and buffering of process stdout/stderr streams
-with thread-safe queue management and configurable buffer sizes.
-"""
+"""OutputCapture service for process output management."""
 
 import time
-import queue
 import threading
 import subprocess
 from typing import Dict, List, Optional
@@ -27,7 +22,7 @@ class OutputCapture:
         self.output_buffer_size = config.monitoring.get("output_buffer_size", 1000)
 
         # Storage for captured output
-        self.output_queues: Dict[str, queue.Queue] = {}
+        self.output_buffers: Dict[str, deque] = {}
         self.output_threads: Dict[str, threading.Thread] = {}
 
         # Thread safety
@@ -45,19 +40,18 @@ class OutputCapture:
             ValueError: If session is already being captured
         """
         with self._lock:
-            if session_id in self.output_queues:
+            if session_id in self.output_buffers:
                 raise ValueError(
                     f"Output capture already active for session {session_id}"
                 )
 
-            # Create output queue
-            output_queue = queue.Queue(maxsize=self.output_buffer_size)
-            self.output_queues[session_id] = output_queue
+            # Create buffered deque
+            self.output_buffers[session_id] = deque(maxlen=self.output_buffer_size)
 
             # Start capture thread
             output_thread = threading.Thread(
                 target=self._capture_output,
-                args=(process, output_queue, session_id),
+                args=(process, session_id),
                 daemon=True,
                 name=f"OutputCapture-{session_id}",
             )
@@ -79,8 +73,8 @@ class OutputCapture:
                 del self.output_threads[session_id]
 
             # Clean up output queue
-            if session_id in self.output_queues:
-                del self.output_queues[session_id]
+            if session_id in self.output_buffers:
+                del self.output_buffers[session_id]
 
     def get_recent_output(self, session_id: str, lines: int = 50) -> List[str]:
         """Get recent output lines from a session.
@@ -92,21 +86,13 @@ class OutputCapture:
         Returns:
             List of recent output lines (newest last)
         """
-        if session_id not in self.output_queues:
-            return []
-
-        output_queue = self.output_queues[session_id]
-        recent_lines = []
-
-        # Drain the queue up to the specified number of lines
-        while len(recent_lines) < lines and not output_queue.empty():
-            try:
-                line = output_queue.get_nowait()
-                recent_lines.append(line)
-            except queue.Empty:
-                break
-
-        return recent_lines
+        with self._lock:
+            buffer = self.output_buffers.get(session_id)
+            if buffer is None:
+                return []
+            if lines is None or lines >= len(buffer):
+                return list(buffer)
+            return list(buffer)[-lines:]
 
     def get_all_output(self, session_id: str) -> List[str]:
         """Get all captured output for a session.
@@ -117,7 +103,11 @@ class OutputCapture:
         Returns:
             List of all output lines
         """
-        return self.get_recent_output(session_id, lines=self.output_buffer_size)
+        with self._lock:
+            buffer = self.output_buffers.get(session_id)
+            if buffer is None:
+                return []
+            return list(buffer)
 
     def inject_output(self, text: str, session_id: Optional[str] = None) -> None:
         """Inject synthetic output lines for testing.
@@ -131,31 +121,23 @@ class OutputCapture:
         """
         with self._lock:
             target_session_id = session_id or next(
-                iter(self.output_queues.keys()), None
+                iter(self.output_buffers.keys()), None
             )
             if not target_session_id:
                 raise ValueError("No monitored sessions available for output injection")
 
-            if target_session_id not in self.output_queues:
-                self.output_queues[target_session_id] = queue.Queue(
-                    maxsize=self.output_buffer_size
+            if target_session_id not in self.output_buffers:
+                self.output_buffers[target_session_id] = deque(
+                    maxlen=self.output_buffer_size
                 )
 
-            q = self.output_queues[target_session_id]
+            buf = self.output_buffers[target_session_id]
 
             for line in text.splitlines():
                 cleaned = line.strip()
                 if not cleaned:
                     continue
-                try:
-                    q.put_nowait(cleaned)
-                except queue.Full:
-                    # Remove oldest item to make room
-                    try:
-                        q.get_nowait()
-                        q.put_nowait(cleaned)
-                    except queue.Empty:
-                        pass
+                buf.append(cleaned)
 
     def has_output(self, session_id: str) -> bool:
         """Check if there is any output available for a session.
@@ -166,9 +148,9 @@ class OutputCapture:
         Returns:
             True if output is available
         """
-        if session_id not in self.output_queues:
-            return False
-        return not self.output_queues[session_id].empty()
+        with self._lock:
+            buffer = self.output_buffers.get(session_id)
+            return bool(buffer)
 
     def get_queue_size(self, session_id: str) -> int:
         """Get the current size of the output queue.
@@ -179,9 +161,9 @@ class OutputCapture:
         Returns:
             Number of items in queue, or 0 if session not found
         """
-        if session_id not in self.output_queues:
-            return 0
-        return self.output_queues[session_id].qsize()
+        with self._lock:
+            buffer = self.output_buffers.get(session_id)
+            return len(buffer) if buffer is not None else 0
 
     def clear_output(self, session_id: str) -> int:
         """Clear all output for a session.
@@ -192,22 +174,16 @@ class OutputCapture:
         Returns:
             Number of items cleared
         """
-        if session_id not in self.output_queues:
-            return 0
-
-        count = 0
-        q = self.output_queues[session_id]
-        while not q.empty():
-            try:
-                q.get_nowait()
-                count += 1
-            except queue.Empty:
-                break
-
-        return count
+        with self._lock:
+            buffer = self.output_buffers.get(session_id)
+            if buffer is None:
+                return 0
+            count = len(buffer)
+            buffer.clear()
+            return count
 
     def _capture_output(
-        self, process: subprocess.Popen, output_queue: queue.Queue, session_id: str
+        self, process: subprocess.Popen, session_id: str
     ) -> None:
         """Capture output from a process in a separate thread.
 
@@ -234,15 +210,10 @@ class OutputCapture:
                 # Add line to queue
                 line = line.strip()
                 if line:
-                    try:
-                        output_queue.put(line, timeout=0.1)
-                    except queue.Full:
-                        # Remove oldest item to make room
-                        try:
-                            output_queue.get_nowait()
-                            output_queue.put(line, timeout=0.1)
-                        except queue.Empty:
-                            pass
+                    with self._lock:
+                        buffer = self.output_buffers.get(session_id)
+                        if buffer is not None:
+                            buffer.append(line)
 
         except Exception:
             # Thread will exit on any error
@@ -253,8 +224,7 @@ class OutputCapture:
         self._shutdown_event.set()
 
         with self._lock:
-            # Stop all captures
-            session_ids = list(self.output_queues.keys())
+            session_ids = list(self.output_buffers.keys())
             for session_id in session_ids:
                 self.stop_capture(session_id)
 
