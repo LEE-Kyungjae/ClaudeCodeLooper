@@ -67,6 +67,7 @@ class ProcessMonitor:
         self._recorded_crash_sessions: set[tuple[str, int]] = set()
         self._archived_output: Dict[str, List[str]] = {}
         self._recovered_processes: List[str] = []
+        self._output_callback: Optional[Callable[[], None]] = None
 
     def start_monitoring(
         self,
@@ -423,6 +424,11 @@ class ProcessMonitor:
         if not target_session:
             return
         self.output_capture.inject_output(text, target_session)
+        if self._output_callback:
+            try:
+                self._output_callback()
+            except Exception:
+                pass
 
     def simulate_process_death(self, session_id: Optional[str] = None) -> None:
         """Simulate abrupt process termination for testing.
@@ -463,6 +469,14 @@ class ProcessMonitor:
     def add_crash_callback(self, callback: Callable[[str], None]) -> None:
         """Register a callback invoked when a crash is detected."""
         self.crash_callbacks.append(callback)
+
+    def register_output_callback(self, callback: Optional[Callable[[], None]]) -> None:
+        """Register a callback triggered when new output arrives."""
+        self._output_callback = callback
+
+    def register_output_callback(self, callback: Optional[Callable[[], None]]) -> None:
+        """Register a callback triggered when new output arrives."""
+        self._output_callback = callback
 
     def get_monitoring_overhead(self) -> Dict[str, float]:
         """Get monitoring system overhead metrics.
