@@ -71,6 +71,7 @@ class RestartController:
         self.task_queue = TaskQueueManager()
         self._log_messages: Deque[str] = deque(maxlen=200)
         self.process_monitor.add_crash_callback(self._handle_process_crash)
+        self.process_monitor.register_output_callback(self._on_process_output)
 
         # Data storage
         self.active_sessions: Dict[str, MonitoringSession] = {}
@@ -741,6 +742,15 @@ class RestartController:
                     callback(data)
                 except Exception as e:
                     print(f"Error in event callback for {event_type}: {e}")
+
+    def _on_process_output(self) -> None:
+        """Triggered when process monitor reports new output."""
+        try:
+            self._check_for_limit_detections()
+        except Exception as exc:
+            self._trigger_event(
+                "error_occurred", {"error": str(exc), "context": "process_output"}
+            )
 
     def _save_current_state(self) -> None:
         """Save current system state."""
