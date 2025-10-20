@@ -27,7 +27,10 @@ class StructuredLogger:
         formatter = StructuredFormatter()
 
         # Console handler
-        if not any(getattr(handler, "_structured_console", False) for handler in self.logger.handlers):
+        if not any(
+            getattr(handler, "_structured_console", False)
+            for handler in self.logger.handlers
+        ):
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
             console_handler._structured_console = True  # type: ignore[attr-defined]

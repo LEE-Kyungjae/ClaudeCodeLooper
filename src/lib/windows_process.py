@@ -1,5 +1,6 @@
 """Windows-specific process monitoring stubs."""
 
+
 class WindowsProcessMonitor:
     """Minimal stub used in non-Windows environments for testing."""
 

@@ -1,4 +1,5 @@
 """Tests for TemplateManager built-in templates."""
+
 from __future__ import annotations
 
 from src.services.template_manager import TemplateManager
@@ -17,4 +18,3 @@ def test_builtin_templates_available():
     assert backend is not None
     prompt = backend.build_guideline_prompt()
     assert "Quality" in prompt or prompt  # ensure prompt is generated
-

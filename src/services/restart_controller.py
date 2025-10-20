@@ -139,9 +139,7 @@ class RestartController:
                 session = MonitoringSession(**session_kwargs)
 
                 # Create restart configuration snapshot for the session
-                restart_config = RestartCommandConfiguration.create_default(
-                    claude_cmd
-                )
+                restart_config = RestartCommandConfiguration.create_default(claude_cmd)
                 if restart_commands:
                     primary_command, *additional_args = restart_commands
                     restart_config.command_template = primary_command
@@ -717,9 +715,7 @@ class RestartController:
             if session is None:
                 raise RuntimeError("No active monitoring session available for restart")
 
-            self._log(
-                f"Manual restart requested for session {session.session_id}"
-            )
+            self._log(f"Manual restart requested for session {session.session_id}")
 
             try:
                 self._initiate_restart(session)

@@ -108,7 +108,9 @@ class PatternDetector:
 
                 # Fallback: check entire text block for multi-line matches
                 if line_records:
-                    block_result = self._check_text_block_for_patterns(text, line_records[-1][0])
+                    block_result = self._check_text_block_for_patterns(
+                        text, line_records[-1][0]
+                    )
                     if block_result and block_result.matched:
                         event = self._create_detection_event(block_result)
                         self.detection_history.append(event)
@@ -171,8 +173,7 @@ class PatternDetector:
 
                 if confidence > best_confidence or (
                     confidence == best_confidence
-                    and len(match.group())
-                    > len(best_match.matched_text or "")
+                    and len(match.group()) > len(best_match.matched_text or "")
                 ):
                     best_confidence = confidence
                     best_match = DetectionResult(

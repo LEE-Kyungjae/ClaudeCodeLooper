@@ -57,7 +57,9 @@ class SignalHandler:
     # ------------------------------------------------------------------ #
     def _log_signal(self, name: str, signum: int) -> None:
         try:
-            self.controller._log(f"{name} (signal {signum}) received - initiating shutdown")
+            self.controller._log(
+                f"{name} (signal {signum}) received - initiating shutdown"
+            )
         except Exception:
             pass
 

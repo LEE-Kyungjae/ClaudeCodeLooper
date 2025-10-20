@@ -182,9 +182,7 @@ class OutputCapture:
             buffer.clear()
             return count
 
-    def _capture_output(
-        self, process: subprocess.Popen, session_id: str
-    ) -> None:
+    def _capture_output(self, process: subprocess.Popen, session_id: str) -> None:
         """Capture output from a process in a separate thread.
 
         Args:

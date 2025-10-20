@@ -1,4 +1,5 @@
 """Tests for TaskQueueManager."""
+
 from __future__ import annotations
 
 from src.models.queued_task import QueuedTask
@@ -53,4 +54,3 @@ def test_clear_prepend_and_serialization():
     ]
     manager.prepend(new_tasks)
     assert manager.list_tasks()[0].description == "prepended-1"
-
