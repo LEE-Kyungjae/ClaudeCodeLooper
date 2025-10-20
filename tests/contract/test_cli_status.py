@@ -5,6 +5,7 @@ They MUST FAIL initially before implementation.
 """
 
 import json
+
 import pytest
 from click.testing import CliRunner
 

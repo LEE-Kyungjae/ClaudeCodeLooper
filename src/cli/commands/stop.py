@@ -1,7 +1,8 @@
 """Stop command for Claude Code monitoring."""
 
-import click
 import sys
+
+import click
 
 
 @click.command()

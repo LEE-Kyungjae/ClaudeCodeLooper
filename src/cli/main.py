@@ -4,10 +4,11 @@ Provides command-line interface using Click framework with support for
 all monitoring, configuration, and management operations.
 """
 
-import click
-import sys
 import os
+import sys
 from typing import Optional
+
+import click
 
 # Use relative imports - no sys.path manipulation needed
 from ..models.system_configuration import SystemConfiguration
@@ -103,13 +104,14 @@ def cli(
         sys.exit(1)
 
 
-# Import command modules
-from .commands.start import start
-from .commands.stop import stop
-from .commands.status import status
 from .commands.config import config as config_cmd
 from .commands.logs import logs
 from .commands.queue import queue as queue_cmd
+
+# Import command modules
+from .commands.start import start
+from .commands.status import status
+from .commands.stop import stop
 
 # Add commands to main group
 cli.add_command(start)

@@ -6,10 +6,11 @@ accurately identify Claude Code usage limits from terminal output.
 This test MUST FAIL initially before implementation.
 """
 
-import pytest
-import time
 import re
+import time
 from unittest.mock import Mock, patch
+
+import pytest
 
 
 class TestLimitDetectionPatterns:
@@ -28,8 +29,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_default_pattern_detection(self):
         """Test detection with default patterns."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         config = SystemConfiguration()
         detector = PatternDetector(config)
@@ -51,8 +52,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_custom_pattern_detection(self):
         """Test detection with custom user patterns."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         config = SystemConfiguration(detection_patterns=self.test_patterns)
         detector = PatternDetector(config)
@@ -74,8 +75,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_regex_pattern_detection(self):
         """Test detection with complex regex patterns."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         regex_patterns = [
             r"limit.*(\d+)\s*hours?",
@@ -104,8 +105,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_case_insensitive_detection(self):
         """Test case-insensitive pattern detection."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         config = SystemConfiguration(
             detection_patterns=["USAGE LIMIT", "Rate Limit", "please WAIT"]
@@ -129,8 +130,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_multiline_pattern_detection(self):
         """Test detection across multiple lines of output."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         config = SystemConfiguration(detection_patterns=["usage.*limit", "wait.*hours"])
         detector = PatternDetector(config)
@@ -147,8 +148,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_false_positive_prevention(self):
         """Test that detector avoids false positives."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         config = SystemConfiguration(
             detection_patterns=["usage limit", "5 hours", "wait"]
@@ -173,8 +174,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_detection_performance(self):
         """Test pattern detection performance requirements."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         # Large pattern set
         patterns = [f"pattern_{i}" for i in range(100)]
@@ -197,8 +198,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_streaming_detection(self):
         """Test real-time detection from streaming output."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         config = SystemConfiguration(detection_patterns=["usage limit"])
         detector = PatternDetector(config)
@@ -225,8 +226,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_pattern_priority_and_specificity(self):
         """Test pattern matching priority and specificity."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         # More specific patterns should take priority
         patterns = [
@@ -250,8 +251,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_detection_with_noise(self):
         """Test detection in noisy output with lots of irrelevant text."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         config = SystemConfiguration(detection_patterns=["usage limit exceeded"])
         detector = PatternDetector(config)
@@ -273,8 +274,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_detection_state_management(self):
         """Test detection state management across multiple messages."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         config = SystemConfiguration(detection_patterns=["usage limit"])
         detector = PatternDetector(config)
@@ -294,8 +295,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_pattern_configuration_reload(self):
         """Test reloading detection patterns during runtime."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         # Initial patterns
         config = SystemConfiguration(detection_patterns=["old pattern"])
@@ -318,8 +319,8 @@ class TestLimitDetectionPatterns:
     @pytest.mark.integration
     def test_unicode_and_encoding_handling(self):
         """Test detection with unicode characters and different encodings."""
-        from src.services.pattern_detector import PatternDetector
         from src.models.system_configuration import SystemConfiguration
+        from src.services.pattern_detector import PatternDetector
 
         config = SystemConfiguration(
             detection_patterns=["사용 제한", "使用限制", "límite de uso"]

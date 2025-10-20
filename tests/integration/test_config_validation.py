@@ -7,10 +7,11 @@ This test MUST FAIL initially before implementation.
 """
 
 import json
-import pytest
-import tempfile
 import os
+import tempfile
 from pathlib import Path
+
+import pytest
 
 
 class TestConfigurationValidation:
@@ -30,8 +31,8 @@ class TestConfigurationValidation:
     @pytest.mark.integration
     def test_default_configuration_loading(self):
         """Test that default configuration loads successfully."""
-        from src.services.config_manager import ConfigManager
         from src.models.system_configuration import SystemConfiguration
+        from src.services.config_manager import ConfigManager
 
         config_manager = ConfigManager()
         config = config_manager.load_default_config()
@@ -242,8 +243,9 @@ class TestConfigurationValidation:
     @pytest.mark.integration
     def test_configuration_environment_variables(self):
         """Test configuration override via environment variables."""
-        from src.services.config_manager import ConfigManager
         import os
+
+        from src.services.config_manager import ConfigManager
 
         # Set environment variables
         os.environ["CLAUDE_RESTART_LOG_LEVEL"] = "ERROR"
@@ -294,9 +296,10 @@ class TestConfigurationValidation:
     @pytest.mark.integration
     def test_configuration_concurrent_access(self):
         """Test configuration access from multiple threads."""
-        from src.services.config_manager import ConfigManager
         import threading
         import time
+
+        from src.services.config_manager import ConfigManager
 
         config = {
             "log_level": "INFO",

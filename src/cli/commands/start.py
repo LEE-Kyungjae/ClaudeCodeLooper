@@ -4,10 +4,11 @@ Implements the 'start' command that begins monitoring a Claude Code process
 with automatic restart capabilities.
 """
 
-import click
-import sys
 import os
+import sys
 from typing import List, Optional
+
+import click
 
 
 @click.command()

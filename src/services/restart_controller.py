@@ -4,28 +4,27 @@ Main orchestration service that coordinates all components for the
 automated Claude Code restart system.
 """
 
-import time
 import threading
+import time
 from collections import deque
-from datetime import datetime, timedelta
-from typing import Deque, Dict, List, Optional, Any, Callable
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from enum import Enum
+from typing import Any, Callable, Deque, Dict, List, Optional
 
-from ..models.system_configuration import SystemConfiguration
-from ..models.monitoring_session import MonitoringSession, SessionStatus
 from ..models.limit_detection_event import LimitDetectionEvent
-from ..models.waiting_period import WaitingPeriod, PeriodStatus
-from ..models.restart_command_config import RestartCommandConfiguration
-from ..models.task_completion_monitor import TaskCompletionMonitor, TaskStatus
+from ..models.monitoring_session import MonitoringSession, SessionStatus
 from ..models.queued_task import QueuedTask
-
-from .process_monitor import ProcessMonitor
-from .pattern_detector import PatternDetector
-from .timing_manager import TimingManager
-from .state_manager import StateManager
+from ..models.restart_command_config import RestartCommandConfiguration
+from ..models.system_configuration import SystemConfiguration
+from ..models.task_completion_monitor import TaskCompletionMonitor, TaskStatus
+from ..models.waiting_period import PeriodStatus, WaitingPeriod
 from .config_manager import ConfigManager
+from .pattern_detector import PatternDetector
+from .process_monitor import ProcessMonitor
+from .state_manager import StateManager
 from .task_queue import TaskQueueManager
+from .timing_manager import TimingManager
 
 
 class ControllerState(Enum):

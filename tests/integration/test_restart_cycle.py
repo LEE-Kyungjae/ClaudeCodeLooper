@@ -11,11 +11,12 @@ This test MUST FAIL initially before implementation.
 """
 
 import json
-import time
-import pytest
 import subprocess
-from unittest.mock import Mock, patch
+import time
 from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
+
+import pytest
 
 
 class TestCompleteRestartCycle:
@@ -46,9 +47,9 @@ class TestCompleteRestartCycle:
     def test_complete_restart_cycle_end_to_end(self):
         """Test complete restart cycle from start to finish."""
         # This test will fail until full implementation is complete
-        from src.services.restart_controller import RestartController
         from src.models.monitoring_session import MonitoringSession
         from src.models.system_configuration import SystemConfiguration
+        from src.services.restart_controller import RestartController
 
         # 1. Initialize system with test configuration
         config = SystemConfiguration(**self.test_config)
@@ -92,8 +93,8 @@ class TestCompleteRestartCycle:
     @pytest.mark.integration
     def test_restart_cycle_with_task_completion(self):
         """Test restart cycle respects ongoing task completion."""
-        from src.services.restart_controller import RestartController
         from src.models.system_configuration import SystemConfiguration
+        from src.services.restart_controller import RestartController
 
         config = SystemConfiguration(**self.test_config)
         controller = RestartController(config)
@@ -125,8 +126,8 @@ class TestCompleteRestartCycle:
     @pytest.mark.integration
     def test_restart_cycle_with_custom_commands(self):
         """Test restart cycle with custom restart commands."""
-        from src.services.restart_controller import RestartController
         from src.models.system_configuration import SystemConfiguration
+        from src.services.restart_controller import RestartController
 
         config = SystemConfiguration(**self.test_config)
         controller = RestartController(config)
@@ -151,9 +152,9 @@ class TestCompleteRestartCycle:
     @pytest.mark.integration
     def test_restart_cycle_state_persistence(self):
         """Test that restart cycle state persists across system restarts."""
+        from src.models.system_configuration import SystemConfiguration
         from src.services.restart_controller import RestartController
         from src.services.state_manager import StateManager
-        from src.models.system_configuration import SystemConfiguration
 
         config = SystemConfiguration(**self.test_config)
 
@@ -183,8 +184,8 @@ class TestCompleteRestartCycle:
     @pytest.mark.integration
     def test_restart_cycle_multiple_detections(self):
         """Test handling of multiple limit detections."""
-        from src.services.restart_controller import RestartController
         from src.models.system_configuration import SystemConfiguration
+        from src.services.restart_controller import RestartController
 
         config = SystemConfiguration(**self.test_config)
         controller = RestartController(config)
@@ -211,8 +212,8 @@ class TestCompleteRestartCycle:
     @pytest.mark.integration
     def test_restart_cycle_performance_requirements(self):
         """Test that restart cycle meets performance requirements."""
-        from src.services.restart_controller import RestartController
         from src.models.system_configuration import SystemConfiguration
+        from src.services.restart_controller import RestartController
 
         config = SystemConfiguration(**self.test_config)
         controller = RestartController(config)
@@ -250,8 +251,8 @@ class TestCompleteRestartCycle:
     @pytest.mark.integration
     def test_restart_cycle_error_scenarios(self):
         """Test restart cycle handles error scenarios gracefully."""
-        from src.services.restart_controller import RestartController
         from src.models.system_configuration import SystemConfiguration
+        from src.services.restart_controller import RestartController
 
         config = SystemConfiguration(**self.test_config)
         controller = RestartController(config)

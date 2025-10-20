@@ -6,12 +6,13 @@ across various failure conditions.
 This test MUST FAIL initially before implementation.
 """
 
-import pytest
-import time
-import tempfile
 import os
 import signal
+import tempfile
+import time
 from unittest.mock import Mock, patch
+
+import pytest
 
 
 class TestErrorRecoveryScenarios:
@@ -30,8 +31,8 @@ class TestErrorRecoveryScenarios:
     @pytest.mark.integration
     def test_claude_process_crash_recovery(self):
         """Test recovery when Claude Code process crashes unexpectedly."""
-        from src.services.restart_controller import RestartController
         from src.models.system_configuration import SystemConfiguration
+        from src.services.restart_controller import RestartController
 
         config = SystemConfiguration(
             log_level="DEBUG",
@@ -66,8 +67,8 @@ class TestErrorRecoveryScenarios:
     @pytest.mark.integration
     def test_file_system_errors_recovery(self):
         """Test recovery from file system errors (permissions, disk full, etc.)."""
-        from src.services.state_manager import StateManager
         from src.services.config_manager import ConfigManager
+        from src.services.state_manager import StateManager
 
         # Test permission denied scenario
         restricted_path = os.path.join(self.temp_dir, "restricted")
@@ -117,8 +118,8 @@ class TestErrorRecoveryScenarios:
     @pytest.mark.integration
     def test_memory_pressure_recovery(self):
         """Test system behavior under memory pressure."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration(
             monitoring={"check_interval": 0.01}  # Very fast to increase memory usage
@@ -143,8 +144,8 @@ class TestErrorRecoveryScenarios:
     @pytest.mark.integration
     def test_network_interruption_recovery(self):
         """Test recovery from network-related interruptions."""
-        from src.services.restart_controller import RestartController
         from src.models.system_configuration import SystemConfiguration
+        from src.services.restart_controller import RestartController
 
         config = SystemConfiguration()
         controller = RestartController(config)
@@ -175,9 +176,9 @@ class TestErrorRecoveryScenarios:
     @pytest.mark.integration
     def test_signal_interruption_recovery(self):
         """Test recovery from signal interruptions (SIGINT, SIGTERM)."""
-        from src.services.restart_controller import RestartController
         from src.lib.signal_handler import SignalHandler
         from src.models.system_configuration import SystemConfiguration
+        from src.services.restart_controller import RestartController
 
         config = SystemConfiguration()
         controller = RestartController(config)
@@ -228,9 +229,10 @@ class TestErrorRecoveryScenarios:
     @pytest.mark.integration
     def test_concurrent_access_conflicts_recovery(self):
         """Test recovery from concurrent access conflicts."""
-        from src.services.state_manager import StateManager
         import threading
         import time
+
+        from src.services.state_manager import StateManager
 
         state_manager = StateManager(state_dir=self.temp_dir)
         conflicts = []
@@ -264,8 +266,8 @@ class TestErrorRecoveryScenarios:
     @pytest.mark.integration
     def test_resource_exhaustion_recovery(self):
         """Test recovery from resource exhaustion (file handles, etc.)."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration()
         monitor = ProcessMonitor(config)
@@ -301,9 +303,10 @@ class TestErrorRecoveryScenarios:
     @pytest.mark.integration
     def test_timing_drift_recovery(self):
         """Test recovery from system clock changes and timing drift."""
-        from src.services.timing_manager import TimingManager
-        from src.models.waiting_period import WaitingPeriod
         from datetime import datetime, timedelta
+
+        from src.models.waiting_period import WaitingPeriod
+        from src.services.timing_manager import TimingManager
 
         timing_manager = TimingManager()
 
@@ -327,8 +330,8 @@ class TestErrorRecoveryScenarios:
     @pytest.mark.integration
     def test_graceful_degradation_under_stress(self):
         """Test graceful degradation when system is under stress."""
-        from src.services.restart_controller import RestartController
         from src.models.system_configuration import SystemConfiguration
+        from src.services.restart_controller import RestartController
 
         # Stress configuration
         config = SystemConfiguration(

@@ -1,9 +1,10 @@
 """Config command for configuration management."""
 
-import click
 import json
-import sys
 import os
+import sys
+
+import click
 
 
 @click.group()

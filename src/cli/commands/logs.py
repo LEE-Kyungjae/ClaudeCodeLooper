@@ -1,11 +1,12 @@
 """Logs command for accessing system logs."""
 
-import click
-import sys
 import os
 import re
+import sys
 from datetime import datetime
 from typing import List, Optional
+
+import click
 
 
 @click.command()
