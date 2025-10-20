@@ -1,12 +1,13 @@
 """Unit tests for custom exceptions."""
 
 import pytest
+
 from src.exceptions import (
+    ConfigurationException,
+    DetectionException,
     MonitoringException,
     ProcessException,
     ProcessStartError,
-    DetectionException,
-    ConfigurationException,
     with_context,
 )
 

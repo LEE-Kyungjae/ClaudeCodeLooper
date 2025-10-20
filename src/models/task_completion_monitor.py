@@ -4,12 +4,13 @@ Represents the mechanism for ensuring Claude Code tasks finish before
 restart cycles begin, preventing token waste and incomplete operations.
 """
 
-import uuid
 import re
+import uuid
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any, Pattern
-from pydantic import BaseModel, Field, ConfigDict, field_validator
 from enum import Enum
+from typing import Any, Dict, List, Optional, Pattern
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TaskStatus(str, Enum):

@@ -6,7 +6,8 @@ matched pattern, and subsequent actions taken.
 
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticUndefined
 

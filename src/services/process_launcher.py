@@ -5,23 +5,24 @@ safe command parsing and proper resource cleanup.
 """
 
 import os
-import time
-import psutil
-import subprocess
 import shlex
-from datetime import datetime
-from typing import Dict, Optional, Any, List
 import shutil
+import subprocess
 import sys
+import time
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from ..models.system_configuration import SystemConfiguration
+import psutil
+
 from ..exceptions import (
+    ProcessNotFoundError,
     ProcessStartError,
     ProcessStopError,
-    ProcessNotFoundError,
     with_context,
 )
+from ..models.system_configuration import SystemConfiguration
 from ..utils.logging import get_logger
 
 

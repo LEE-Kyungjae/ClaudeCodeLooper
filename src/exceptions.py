@@ -4,7 +4,7 @@ Provides a hierarchical exception structure for different error domains,
 enabling precise error handling and clear error messaging.
 """
 
-from typing import Optional, Any
+from typing import Any, Optional
 
 
 class MonitoringException(Exception):

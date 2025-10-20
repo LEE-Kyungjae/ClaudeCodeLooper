@@ -4,16 +4,17 @@ Provides real-time health metrics and status monitoring for running processes
 including CPU usage, memory consumption, and process state tracking.
 """
 
-import time
-import psutil
 import threading
-from datetime import datetime
-from typing import Dict, Optional, Any
+import time
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, Optional
 
-from ..models.system_configuration import SystemConfiguration
+import psutil
+
 from ..exceptions import ProcessHealthError
+from ..models.system_configuration import SystemConfiguration
 
 
 class ProcessState(Enum):

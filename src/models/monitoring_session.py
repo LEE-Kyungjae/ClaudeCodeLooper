@@ -6,9 +6,10 @@ including start time, current status, and detection history.
 
 import uuid
 from datetime import datetime
-from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field, ConfigDict, field_validator
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .restart_command_config import RestartCommandConfiguration
 

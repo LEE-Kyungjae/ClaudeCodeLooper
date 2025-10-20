@@ -4,9 +4,9 @@ Represents a pending task that should be executed when Claude Code
 resumes after hitting the usage limit cooldown.
 """
 
-from datetime import datetime
-from typing import Dict, Any, List, Optional
 import uuid
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 

@@ -1,10 +1,10 @@
 """OutputCapture service for process output management."""
 
-import time
-import threading
 import subprocess
-from typing import Dict, List, Optional
+import threading
+import time
 from collections import deque
+from typing import Dict, List, Optional
 
 from ..models.system_configuration import SystemConfiguration
 

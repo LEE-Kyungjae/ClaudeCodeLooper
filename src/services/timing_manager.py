@@ -4,15 +4,15 @@ Handles waiting periods, countdown timers, clock drift detection,
 and precise timing for Claude Code restart cycles.
 """
 
-import time
 import threading
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, Callable, Any
+import time
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 from ..models.system_configuration import SystemConfiguration
-from ..models.waiting_period import WaitingPeriod, PeriodStatus
+from ..models.waiting_period import PeriodStatus, WaitingPeriod
 
 
 @dataclass

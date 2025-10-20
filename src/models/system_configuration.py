@@ -4,11 +4,12 @@ Represents global system settings and preferences for the automated
 restart monitoring system.
 """
 
-from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+import os
 from enum import Enum
 from pathlib import Path
-import os
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class LogLevel(str, Enum):

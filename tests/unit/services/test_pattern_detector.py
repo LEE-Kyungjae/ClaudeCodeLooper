@@ -1,12 +1,13 @@
 """Unit tests for PatternDetector service."""
 
-import pytest
 import re
-from unittest.mock import Mock, MagicMock
 from datetime import datetime
+from unittest.mock import MagicMock, Mock
 
-from src.services.pattern_detector import PatternDetector, DetectionResult
+import pytest
+
 from src.models.system_configuration import SystemConfiguration
+from src.services.pattern_detector import DetectionResult, PatternDetector
 
 
 class TestPatternDetectorInitialization:

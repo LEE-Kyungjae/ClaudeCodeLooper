@@ -4,11 +4,12 @@ Represents user-defined commands and parameters that should be executed
 when Claude Code is restarted after cooldown periods.
 """
 
-import uuid
 import os
-from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+import uuid
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class RestartCommandConfiguration(BaseModel):

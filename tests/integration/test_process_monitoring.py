@@ -6,13 +6,14 @@ Claude Code process management, output capture, and system integration.
 This test MUST FAIL initially before implementation.
 """
 
-import pytest
-import time
-import subprocess
-import psutil
 import os
 import signal
+import subprocess
+import time
 from unittest.mock import Mock, patch
+
+import psutil
+import pytest
 
 
 class TestProcessMonitoring:
@@ -35,8 +36,8 @@ class TestProcessMonitoring:
     @pytest.mark.integration
     def test_process_lifecycle_management(self):
         """Test complete process lifecycle management."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration(
             monitoring={"check_interval": 0.1, "task_timeout": 5}
@@ -66,8 +67,8 @@ class TestProcessMonitoring:
     @pytest.mark.integration
     def test_real_time_output_capture(self):
         """Test real-time capture of process output."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration(
             monitoring={"check_interval": 0.05}  # Fast capture
@@ -97,8 +98,8 @@ class TestProcessMonitoring:
     @pytest.mark.integration
     def test_process_health_monitoring(self):
         """Test monitoring of process health and status."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration()
         monitor = ProcessMonitor(config)
@@ -121,8 +122,8 @@ class TestProcessMonitoring:
     @pytest.mark.integration
     def test_multiple_process_monitoring(self):
         """Test monitoring multiple Claude Code instances."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration()
         monitor = ProcessMonitor(config)
@@ -147,8 +148,8 @@ class TestProcessMonitoring:
     @pytest.mark.integration
     def test_process_resource_monitoring(self):
         """Test monitoring of process resource usage."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration()
         monitor = ProcessMonitor(config)
@@ -176,8 +177,8 @@ class TestProcessMonitoring:
     @pytest.mark.integration
     def test_process_crash_detection(self):
         """Test detection of process crashes and unexpected termination."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration(monitoring={"check_interval": 0.1})
         monitor = ProcessMonitor(config)
@@ -200,8 +201,8 @@ class TestProcessMonitoring:
     @pytest.mark.integration
     def test_output_buffering_and_streaming(self):
         """Test output buffering and streaming capabilities."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration(monitoring={"output_buffer_size": 1000})
         monitor = ProcessMonitor(config)
@@ -225,9 +226,9 @@ class TestProcessMonitoring:
     @pytest.mark.integration
     def test_windows_specific_monitoring(self):
         """Test Windows-specific process monitoring features."""
-        from src.services.process_monitor import ProcessMonitor
         from src.lib.windows_process import WindowsProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         if os.name != "nt":
             pytest.skip("Windows-specific test")
@@ -255,8 +256,8 @@ class TestProcessMonitoring:
     @pytest.mark.integration
     def test_signal_handling_and_graceful_shutdown(self):
         """Test proper signal handling and graceful process shutdown."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration()
         monitor = ProcessMonitor(config)
@@ -281,8 +282,8 @@ class TestProcessMonitoring:
     @pytest.mark.integration
     def test_process_monitoring_performance(self):
         """Test process monitoring performance under load."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration(
             monitoring={"check_interval": 0.01}  # Very frequent monitoring
@@ -315,8 +316,8 @@ class TestProcessMonitoring:
     @pytest.mark.integration
     def test_process_environment_isolation(self):
         """Test process environment and working directory isolation."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration()
         monitor = ProcessMonitor(config)
@@ -349,8 +350,8 @@ class TestProcessMonitoring:
     @pytest.mark.integration
     def test_monitoring_error_recovery(self):
         """Test recovery from monitoring errors and edge cases."""
-        from src.services.process_monitor import ProcessMonitor
         from src.models.system_configuration import SystemConfiguration
+        from src.services.process_monitor import ProcessMonitor
 
         config = SystemConfiguration()
         monitor = ProcessMonitor(config)

@@ -3,11 +3,11 @@
 Provides context-aware logging with structured data for better observability.
 """
 
-import logging
 import json
+import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 
 class StructuredLogger:

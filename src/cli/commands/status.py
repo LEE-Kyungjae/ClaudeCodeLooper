@@ -1,8 +1,9 @@
 """Status command for monitoring information."""
 
-import click
 import json
 from datetime import datetime
+
+import click
 
 
 @click.command()
@@ -161,9 +162,9 @@ def _show_status_once(cli_ctx, output_json: bool, verbose: bool):
 
 def _watch_status(cli_ctx, output_json: bool, verbose: bool):
     """Continuously watch and update status."""
-    import time
     import os
     import subprocess
+    import time
 
     try:
         while True:

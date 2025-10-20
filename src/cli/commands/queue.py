@@ -1,7 +1,8 @@
 """Queue command for managing post-restart task automation."""
 
-import click
 from typing import List
+
+import click
 
 
 @click.group()

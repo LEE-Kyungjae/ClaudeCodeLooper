@@ -6,9 +6,10 @@ remaining duration, and completion callback information.
 
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, Callable, List
-from pydantic import BaseModel, Field, ConfigDict, field_validator
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PeriodStatus(str, Enum):

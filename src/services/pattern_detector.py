@@ -5,15 +5,15 @@ using configurable regex patterns with confidence scoring and context capture.
 """
 
 import re
-import time
-from datetime import datetime
-from typing import List, Dict, Optional, Pattern, Any
-from dataclasses import dataclass
-from collections import deque
 import threading
+import time
+from collections import deque
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Pattern
 
-from ..models.system_configuration import SystemConfiguration
 from ..models.limit_detection_event import LimitDetectionEvent
+from ..models.system_configuration import SystemConfiguration
 
 
 @dataclass
