@@ -1,3 +1,9 @@
+---
+command: "/cl:queue"
+title: "Add Queued Task"
+description: "Add a follow-up task that should run after Claude restarts."
+---
+
 # Queued Task - Add
 
 Add a new post-restart task to the automation queue.

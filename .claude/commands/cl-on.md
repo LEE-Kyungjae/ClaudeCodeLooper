@@ -1,3 +1,9 @@
+---
+command: "/cl:on"
+title: "Start Monitoring"
+description: "Start the ClaudeCodeLooper auto-restart monitor in daemon mode."
+---
+
 # Claude Code Auto-Restart Monitor - Start
 
 Start the automated Claude Code restart monitoring system.
