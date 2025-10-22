@@ -62,35 +62,6 @@ def start(
         click.echo("Starting Claude Code monitoring...")
 
     try:
-        # Validate Claude Code command
-        if not claude_cmd.strip():
-            click.echo("Error: Claude command cannot be empty", err=True)
-            sys.exit(1)
-
-        # Check if Claude Code command exists (or allow simulation)
-        claude_executable = claude_cmd.split()[0]
-        command_exists = _command_exists(claude_executable)
-        if not command_exists:
-            simulation_allowed = (
-                cli_ctx.config and cli_ctx.config.allows_process_simulation()
-            )
-            simulation_whitelist = {"claude", "claude-cli"}
-            if simulation_allowed and claude_executable.lower() in simulation_whitelist:
-                if not cli_ctx.quiet:
-                    click.echo(
-                        f"Warning: Command '{claude_executable}' not found. Starting in simulation mode."
-                    )
-            else:
-                click.echo(
-                    f"Error: Claude Code command not found: {claude_executable}",
-                    err=True,
-                )
-                click.echo(
-                    "Make sure Claude Code is installed and accessible in PATH",
-                    err=True,
-                )
-                sys.exit(2)
-
         # Validate working directory
         if work_dir:
             work_dir = os.path.abspath(work_dir)
@@ -115,6 +86,36 @@ def start(
                     f"Error: No access to working directory: {work_dir}", err=True
                 )
                 sys.exit(3)
+
+        # Validate Claude Code command
+        if not claude_cmd.strip():
+            click.echo("Error: Claude command cannot be empty", err=True)
+            sys.exit(1)
+
+        # Check if Claude Code command exists (or allow simulation)
+        claude_executable = claude_cmd.split()[0]
+        command_exists = _command_exists(claude_executable)
+        if not command_exists:
+            simulation_allowed = bool(
+                getattr(cli_ctx, "test_mode", False)
+                or (cli_ctx.config and cli_ctx.config.allows_process_simulation())
+            )
+            simulation_whitelist = {"claude", "claude-cli"}
+            if simulation_allowed and claude_executable.lower() in simulation_whitelist:
+                if not cli_ctx.quiet:
+                    click.echo(
+                        f"Warning: Command '{claude_executable}' not found. Starting in simulation mode."
+                    )
+            else:
+                click.echo(
+                    f"Error: Claude Code command not found: {claude_executable}",
+                    err=True,
+                )
+                click.echo(
+                    "Make sure Claude Code is installed and accessible in PATH",
+                    err=True,
+                )
+                sys.exit(2)
 
         # Load custom config if specified
         if config_file:
