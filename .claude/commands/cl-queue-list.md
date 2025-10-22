@@ -1,3 +1,9 @@
+---
+command: "/cl:queue:list"
+title: "List Queued Tasks"
+description: "Show queued tasks waiting for the next Claude restart cycle."
+---
+
 # List queued tasks
 
 Display the tasks currently scheduled to run after the cooldown restart.

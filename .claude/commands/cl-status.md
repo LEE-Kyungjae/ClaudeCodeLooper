@@ -1,3 +1,9 @@
+---
+command: "/cl:status"
+title: "Show Monitor Status"
+description: "Display ClaudeCodeLooper status, waiting periods, and detections."
+---
+
 # Claude Code Auto-Restart Monitor - Status
 
 Check the current status of the automated restart monitoring system.

@@ -1,3 +1,9 @@
+---
+command: "/cl:queue:templates"
+title: "List Task Templates"
+description: "Display reusable queue templates and their guidance."
+---
+
 # List task queue templates
 
 List the predefined task templates and their guidelines.

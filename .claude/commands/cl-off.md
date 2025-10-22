@@ -1,3 +1,9 @@
+---
+command: "/cl:off"
+title: "Stop Monitoring"
+description: "Stop all active ClaudeCodeLooper monitoring sessions."
+---
+
 # Claude Code Auto-Restart Monitor - Stop
 
 Stop the automated Claude Code restart monitoring system.

@@ -10,7 +10,7 @@ include requirements-dev.txt
 recursive-include config *.json
 
 # Include Claude Code slash commands
-recursive-include .claude/commands *.md
+recursive-include .claude/commands *.md *.json
 
 # Include installation scripts
 include install.sh

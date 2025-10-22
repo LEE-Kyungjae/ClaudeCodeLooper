@@ -1,3 +1,9 @@
+---
+command: "/cl:logs"
+title: "Show Monitor Logs"
+description: "Stream recent ClaudeCodeLooper log output and detections."
+---
+
 # Claude Code Auto-Restart Monitor - Logs
 
 View recent logs and events from the monitoring system.

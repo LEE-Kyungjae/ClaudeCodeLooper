@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "commands": [
+    {
+      "name": "/cl:on",
+      "file": "cl-on.md",
+      "title": "Start Monitoring",
+      "description": "Start the ClaudeCodeLooper auto-restart monitor in daemon mode."
+    },
+    {
+      "name": "/cl:off",
+      "file": "cl-off.md",
+      "title": "Stop Monitoring",
+      "description": "Stop all active ClaudeCodeLooper monitoring sessions."
+    },
+    {
+      "name": "/cl:status",
+      "file": "cl-status.md",
+      "title": "Show Monitor Status",
+      "description": "Display current status, waiting periods, and detection counts."
+    },
+    {
+      "name": "/cl:logs",
+      "file": "cl-logs.md",
+      "title": "Show Monitor Logs",
+      "description": "Stream recent log output and highlight limit detections."
+    },
+    {
+      "name": "/cl:queue",
+      "file": "cl-queue.md",
+      "title": "Add Queued Task",
+      "description": "Queue a follow-up task to run after the next restart."
+    },
+    {
+      "name": "/cl:queue:list",
+      "file": "cl-queue-list.md",
+      "title": "List Queued Tasks",
+      "description": "List queued tasks waiting for the restart cycle."
+    },
+    {
+      "name": "/cl:queue:delete",
+      "file": "cl-queue-delete.md",
+      "title": "Remove Queued Tasks",
+      "description": "Remove queued tasks by their list numbers."
+    },
+    {
+      "name": "/cl:queue:templates",
+      "file": "cl-queue-templates.md",
+      "title": "List Task Templates",
+      "description": "Display available queue templates and guidance."
+    }
+  ]
+}

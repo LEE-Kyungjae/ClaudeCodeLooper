@@ -1,3 +1,9 @@
+---
+command: "/cl:queue:delete"
+title: "Remove Queued Tasks"
+description: "Delete one or more queued tasks by their list numbers."
+---
+
 # Remove queued tasks
 
 Remove one or more queued tasks by their list numbers.
