@@ -56,13 +56,20 @@ class StateManager:
                 pass
 
         if state_dir is None and not os.access(self.state_dir, os.W_OK):
-            fallback_dir = tempfile.mkdtemp(prefix="claude_state_")
+            fallback_root = Path(tempfile.gettempdir()) / "claude-restart-monitor"
             state_filename = os.path.basename(default_state_file)
             backup_dirname = os.path.basename(default_backup_dir)
-            self.state_dir = fallback_dir
-            self.state_file = os.path.join(fallback_dir, state_filename)
-            self.backup_dir = os.path.join(fallback_dir, backup_dirname)
-            os.makedirs(self.backup_dir, exist_ok=True)
+
+            try:
+                fallback_root.mkdir(parents=True, exist_ok=True)
+            except PermissionError:
+                # If even the temp dir is unusable we keep the original values
+                pass
+            else:
+                self.state_dir = str(fallback_root)
+                self.state_file = os.path.join(self.state_dir, state_filename)
+                self.backup_dir = os.path.join(self.state_dir, backup_dirname)
+                os.makedirs(self.backup_dir, exist_ok=True)
 
         # Thread safety
         self._lock = threading.RLock()
