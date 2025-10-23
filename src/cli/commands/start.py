@@ -70,7 +70,9 @@ def start(
                     work_dir = None
                 else:
                     parent_dir = os.path.dirname(work_dir) or os.path.sep
-                    parent_accessible = os.access(parent_dir, os.W_OK | os.X_OK)
+                    parent_accessible = os.access(
+                        parent_dir, os.W_OK | os.X_OK | os.R_OK
+                    )
                     if not parent_accessible:
                         click.echo(
                             f"Error: No access to working directory: {work_dir}",
@@ -81,7 +83,7 @@ def start(
                         f"Error: Working directory does not exist: {work_dir}", err=True
                     )
                     sys.exit(1)
-            elif not os.access(work_dir, os.R_OK | os.X_OK):
+            elif not os.access(work_dir, os.R_OK | os.W_OK | os.X_OK):
                 click.echo(
                     f"Error: No access to working directory: {work_dir}", err=True
                 )
