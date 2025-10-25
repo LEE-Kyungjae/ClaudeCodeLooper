@@ -532,7 +532,7 @@ Bug reports, feature suggestions, and pull requests are always welcome!
 
 - **Issues**: [GitHub Issues](https://github.com/LEE-Kyungjae/ClaudeCodeLooper/issues)
 - **Documentation**: [Wiki](https://github.com/LEE-Kyungjae/ClaudeCodeLooper/wiki)
-- **Email**: your-email@example.com
+- **Email**: ze2@kakao.com
 
 ---
 
