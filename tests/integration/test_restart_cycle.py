@@ -10,11 +10,12 @@ This test validates the full end-to-end restart workflow:
 This test MUST FAIL initially before implementation.
 """
 
-import json
-import subprocess
+import os
+import shutil
+import tempfile
 import time
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -25,6 +26,7 @@ class TestCompleteRestartCycle:
     def setup_method(self):
         """Set up test environment."""
         self.mock_processes = []
+        self.test_work_dir = tempfile.mkdtemp()
         self.test_config = {
             "log_level": "DEBUG",
             "detection_patterns": ["test limit message"],
@@ -42,6 +44,17 @@ class TestCompleteRestartCycle:
                 process.terminate()
             except:
                 pass
+        if getattr(self, "test_work_dir", None) and os.path.isdir(self.test_work_dir):
+            shutil.rmtree(self.test_work_dir, ignore_errors=True)
+
+    def wait_for(self, condition, *, timeout: float = 5.0, interval: float = 0.05):
+        """Poll until condition is true or timeout expires."""
+        start = time.time()
+        while time.time() - start < timeout:
+            if condition():
+                return True
+            time.sleep(interval)
+        return False
 
     @pytest.mark.integration
     def test_complete_restart_cycle_end_to_end(self):
@@ -58,7 +71,7 @@ class TestCompleteRestartCycle:
         # 2. Start monitoring with mock Claude Code process
         session = controller.start_monitoring(
             claude_cmd="echo 'test process'",
-            work_dir="/tmp",
+            work_dir=self.test_work_dir,
             restart_commands=["echo 'restart'"],
         )
 
@@ -69,8 +82,9 @@ class TestCompleteRestartCycle:
         controller.process_monitor.inject_output("test limit message")
 
         # 4. Verify transition to waiting period
-        time.sleep(0.2)  # Allow processing
-        assert session.status == "waiting"
+        assert self.wait_for(
+            lambda: session.status == "waiting"
+        ), "Session should enter waiting state"
         assert controller.waiting_period is not None
         assert controller.waiting_period.status == "active"
 
@@ -82,8 +96,9 @@ class TestCompleteRestartCycle:
             controller.timing_manager.check_waiting_period()
 
         # 6. Verify restart occurs
-        time.sleep(0.2)  # Allow restart processing
-        assert session.status == "active"
+        assert self.wait_for(
+            lambda: session.status == "active"
+        ), "Session should resume after waiting period"
         assert controller.waiting_period.status == "completed"
 
         # 7. Cleanup
@@ -101,7 +116,7 @@ class TestCompleteRestartCycle:
 
         # Start monitoring
         session = controller.start_monitoring(
-            claude_cmd="echo 'ongoing task'", work_dir="/tmp"
+            claude_cmd="echo 'ongoing task'", work_dir=self.test_work_dir
         )
 
         # Simulate ongoing task
@@ -109,17 +124,15 @@ class TestCompleteRestartCycle:
 
         # Trigger limit detection
         controller.process_monitor.inject_output("test limit message")
-        time.sleep(0.2)
-
-        # Should wait for task completion before entering waiting period
-        assert session.status == "active"  # Still active due to ongoing task
+        assert self.wait_for(
+            lambda: session.status == "active"
+        ), "Session should remain active while task in progress"
 
         # Complete the task
         controller.task_monitor.set_task_in_progress(False)
-        time.sleep(0.2)
-
-        # Now should enter waiting period
-        assert session.status == "waiting"
+        assert self.wait_for(
+            lambda: session.status == "waiting"
+        ), "Session should enter waiting once task completes"
 
         controller.stop_monitoring()
 
@@ -154,7 +167,6 @@ class TestCompleteRestartCycle:
         """Test that restart cycle state persists across system restarts."""
         from src.models.system_configuration import SystemConfiguration
         from src.services.restart_controller import RestartController
-        from src.services.state_manager import StateManager
 
         config = SystemConfiguration(**self.test_config)
 
@@ -163,7 +175,9 @@ class TestCompleteRestartCycle:
         session = controller1.start_monitoring(claude_cmd="echo 'test'")
 
         controller1.process_monitor.inject_output("test limit message")
-        time.sleep(0.2)
+        assert self.wait_for(
+            lambda: session.status == "waiting"
+        ), "Session should enter waiting before persisting state"
 
         session_id = session.session_id
 
@@ -194,14 +208,17 @@ class TestCompleteRestartCycle:
 
         # First detection
         controller.process_monitor.inject_output("test limit message")
-        time.sleep(0.2)
-        assert session.status == "waiting"
+        assert self.wait_for(
+            lambda: session.status == "waiting"
+        ), "Session should enter waiting after detection"
 
         first_detection_count = session.detection_count
 
         # Second detection while waiting (should be handled gracefully)
         controller.process_monitor.inject_output("test limit message")
-        time.sleep(0.2)
+        assert self.wait_for(
+            lambda: session.detection_count == first_detection_count + 1
+        ), "Detection count should increment once"
 
         # Should not create duplicate waiting periods
         assert session.detection_count == first_detection_count + 1
@@ -266,12 +283,8 @@ class TestCompleteRestartCycle:
 
         # Simulate process death
         controller.process_monitor.simulate_process_death()
-        time.sleep(0.2)
-
-        # Should attempt restart or handle gracefully
-        assert session.status in [
-            "stopped",
-            "active",
-        ]  # Either restart or graceful stop
+        assert self.wait_for(
+            lambda: session.status in {"stopped", "active"}
+        ), "Session should recover or stop after simulated crash"
 
         controller.stop_monitoring()
