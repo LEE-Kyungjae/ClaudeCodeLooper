@@ -10,6 +10,8 @@ from typing import List, Optional
 
 import click
 
+from ...models.system_configuration import SystemConfiguration
+
 
 @click.command()
 @click.option(
@@ -97,17 +99,42 @@ def start(
         # Check if Claude Code command exists (or allow simulation)
         claude_executable = claude_cmd.split()[0]
         command_exists = _command_exists(claude_executable)
+        simulation_whitelist = {"claude", "claude-cli"}
         if not command_exists:
             simulation_allowed = bool(
                 getattr(cli_ctx, "test_mode", False)
                 or (cli_ctx.config and cli_ctx.config.allows_process_simulation())
             )
-            simulation_whitelist = {"claude", "claude-cli"}
-            if simulation_allowed and claude_executable.lower() in simulation_whitelist:
-                if not cli_ctx.quiet:
+
+            if claude_executable.lower() in simulation_whitelist:
+                if not simulation_allowed:
+                    if cli_ctx.config is None:
+                        cli_ctx.config = SystemConfiguration.create_default()
+                        if cli_ctx.controller:
+                            cli_ctx.controller.config = cli_ctx.config
+                    if cli_ctx.config:
+                        cli_ctx.config.monitoring["allow_process_simulation"] = True
+                        if cli_ctx.controller:
+                            cli_ctx.controller.config.monitoring[
+                                "allow_process_simulation"
+                            ] = True
+                        simulation_allowed = True
+
+                if simulation_allowed:
+                    if not cli_ctx.quiet:
+                        click.echo(
+                            f"Warning: Command '{claude_executable}' not found. Starting in simulation mode."
+                        )
+                else:
                     click.echo(
-                        f"Warning: Command '{claude_executable}' not found. Starting in simulation mode."
+                        f"Error: Claude Code command not found: {claude_executable}",
+                        err=True,
                     )
+                    click.echo(
+                        "Make sure Claude Code is installed and accessible in PATH",
+                        err=True,
+                    )
+                    sys.exit(2)
             else:
                 click.echo(
                     f"Error: Claude Code command not found: {claude_executable}",
