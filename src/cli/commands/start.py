@@ -102,18 +102,7 @@ def start(
         simulation_whitelist = {"claude", "claude-cli"}
         if not command_exists:
             if claude_executable.lower() in simulation_whitelist:
-                if cli_ctx.config is None:
-                    cli_ctx.config = SystemConfiguration.create_default()
-                    if cli_ctx.controller:
-                        cli_ctx.controller.config = cli_ctx.config
-
-                if cli_ctx.config:
-                    cli_ctx.config.monitoring["allow_process_simulation"] = True
-                    if cli_ctx.controller:
-                        cli_ctx.controller.config.monitoring[
-                            "allow_process_simulation"
-                        ] = True
-
+                _force_process_simulation(cli_ctx)
                 if not cli_ctx.quiet:
                     click.echo(
                         f"Warning: Command '{claude_executable}' not found. Starting in simulation mode."
@@ -202,3 +191,32 @@ def _command_exists(command: str) -> bool:
     import shutil
 
     return shutil.which(command) is not None
+
+
+def _force_process_simulation(cli_ctx) -> None:
+    """Ensure simulation mode is enabled across controller services."""
+    if cli_ctx.config is None:
+        cli_ctx.config = SystemConfiguration.create_default()
+        if cli_ctx.controller:
+            cli_ctx.controller.config = cli_ctx.config
+
+    targets = []
+    if getattr(cli_ctx, "config", None):
+        targets.append(cli_ctx.config)
+
+    controller = getattr(cli_ctx, "controller", None)
+    if controller:
+        targets.append(controller.config)
+        monitor = getattr(controller, "process_monitor", None)
+        if monitor:
+            targets.append(getattr(monitor, "config", None))
+            launcher = getattr(monitor, "launcher", None)
+            if launcher:
+                targets.append(getattr(launcher, "config", None))
+            health_checker = getattr(monitor, "health_checker", None)
+            if health_checker:
+                targets.append(getattr(health_checker, "config", None))
+
+    for cfg in targets:
+        if cfg and hasattr(cfg, "monitoring"):
+            cfg.monitoring["allow_process_simulation"] = True
