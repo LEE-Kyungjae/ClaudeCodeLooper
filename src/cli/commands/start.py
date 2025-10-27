@@ -97,11 +97,23 @@ def start(
             sys.exit(1)
 
         # Check if Claude Code command exists (or allow simulation)
-        claude_executable = claude_cmd.split()[0]
+        claude_parts = []
+        try:
+            import shlex
+
+            claude_parts = shlex.split(claude_cmd)
+        except ValueError:
+            claude_parts = claude_cmd.split()
+
+        claude_executable = claude_parts[0] if claude_parts else claude_cmd
+        normalized_command = claude_executable.strip().lower()
+        if "/" in normalized_command or "\\" in normalized_command:
+            normalized_command = normalized_command.replace("\\", "/")
+            normalized_command = normalized_command.rsplit("/", 1)[-1]
         command_exists = _command_exists(claude_executable)
         simulation_whitelist = {"claude", "claude-cli"}
         if not command_exists:
-            if claude_executable.lower() in simulation_whitelist:
+            if normalized_command in simulation_whitelist:
                 _force_process_simulation(cli_ctx)
                 if not cli_ctx.quiet:
                     click.echo(
