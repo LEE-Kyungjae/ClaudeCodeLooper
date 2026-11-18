@@ -325,7 +325,9 @@ class TestProcessMonitoring:
         # Create test directory
         import tempfile
 
-        test_dir = tempfile.mkdtemp()
+        # realpath: on Windows mkdtemp() can return an 8.3 short path
+        # (RUNNER~1) while the child's os.getcwd() reports the long one.
+        test_dir = os.path.realpath(tempfile.mkdtemp())
 
         try:
             # Start process with specific working directory
@@ -338,7 +340,10 @@ class TestProcessMonitoring:
             output = monitor.get_recent_output()
 
             # Should run in specified directory
-            assert any(test_dir.replace("\\", "/") in line for line in output)
+            expected = os.path.normcase(test_dir).replace("\\", "/")
+            assert any(
+                expected in os.path.normcase(line).replace("\\", "/") for line in output
+            )
 
             monitor.stop_monitoring()
 
