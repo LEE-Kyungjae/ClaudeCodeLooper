@@ -19,7 +19,10 @@ from ...models.system_configuration import SystemConfiguration
 )
 @click.option(
     "--work-dir",
-    type=click.Path(file_okay=False, dir_okay=True),
+    # readable=False: click would otherwise reject an unreadable directory
+    # with a usage error (exit 2) before the access check below returns
+    # the documented permission-denied code (exit 3).
+    type=click.Path(file_okay=False, dir_okay=True, readable=False),
     help="Working directory for Claude Code",
 )
 @click.option(
