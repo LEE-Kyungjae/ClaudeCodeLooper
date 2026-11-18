@@ -151,3 +151,6 @@ backups/
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude Code per-user settings (machine-specific permissions)
+.claude/settings.local.json
