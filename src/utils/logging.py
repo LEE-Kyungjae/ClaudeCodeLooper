@@ -5,9 +5,14 @@ Provides context-aware logging with structured data for better observability.
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+
+def _utc_timestamp() -> str:
+    """Current UTC time as ISO 8601 with a trailing Z."""
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z"
 
 
 class StructuredLogger:
@@ -94,7 +99,7 @@ class StructuredLogger:
             **kwargs: Additional structured data
         """
         log_data = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": _utc_timestamp(),
             "level": logging.getLevelName(level),
             "logger": self.logger.name,
             "message": message,
@@ -158,7 +163,7 @@ class StructuredFormatter(logging.Formatter):
             return record.structured_json  # type: ignore[return-value]
 
         log_data = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": _utc_timestamp(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
