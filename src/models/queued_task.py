@@ -5,7 +5,7 @@ resumes after hitting the usage limit cooldown.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -16,7 +16,10 @@ class QueuedTask(BaseModel):
 
     task_id: str = Field(default_factory=lambda: f"queue_{uuid.uuid4().hex[:12]}")
     description: str = Field(..., min_length=1)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    # Naive UTC, matching tasks already persisted to disk so they stay comparable.
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
     template_id: Optional[str] = Field(default=None)
     persona_prompt: Optional[str] = Field(default=None)
     guideline_prompt: Optional[str] = Field(default=None)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import signal
-from datetime import datetime
+from datetime import datetime, timezone
 from types import FrameType
 from typing import Callable, Dict, Optional
 
@@ -71,7 +71,7 @@ class SignalHandler:
             try:
                 cached_state = self.controller.state_manager.get_cached_state()
                 state_payload = cached_state or {
-                    "heartbeat": datetime.utcnow().isoformat()  # type: ignore[attr-defined]
+                    "heartbeat": datetime.now(timezone.utc).isoformat()
                 }
                 self.controller.state_manager.save_state(state_payload)
             except Exception:
