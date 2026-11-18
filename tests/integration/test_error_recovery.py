@@ -229,6 +229,10 @@ class TestErrorRecoveryScenarios:
 
         finally:
             os.chmod(self.temp_dir, 0o755)  # Restore permissions
+            # Release the log file; Windows cannot delete an open file in teardown.
+            for handler in list(logging_config.get_logger().handlers):
+                handler.close()
+                logging_config.get_logger().removeHandler(handler)
 
     @pytest.mark.integration
     def test_concurrent_access_conflicts_recovery(self):
