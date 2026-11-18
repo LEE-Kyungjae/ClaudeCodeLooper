@@ -65,6 +65,10 @@ class TestErrorRecoveryScenarios:
         controller.stop_monitoring()
 
     @pytest.mark.integration
+    @pytest.mark.skipif(
+        os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0),
+        reason="chmod 0o000 does not block root or Windows, so no PermissionError is raised",
+    )
     def test_file_system_errors_recovery(self):
         """Test recovery from file system errors (permissions, disk full, etc.)."""
         from src.services.config_manager import ConfigManager
